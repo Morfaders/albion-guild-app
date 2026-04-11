@@ -93,63 +93,44 @@ async function buildEventEmbed(eventId) {
   (presData||[]).forEach(p => { if(counts[p.status]!==undefined) counts[p.status]++; });
   const countStr = `🟢 ${counts.present}  🟡 ${counts.maybe}  ❌ ${counts.absent}`;
 
-  let compFields = [];
+  // ── COMPOSITION tableau compact ──
+  let compStr = '';
 
   if(event.comp_id){
     const { data: comp } = await supabase.from('comps').select('*').eq('id', event.comp_id).single();
-
     if(comp && comp.slots){
       const slots = comp.slots;
-
       (classes||[]).forEach(cls => {
         const clsRoles = (roles||[]).filter(r => r.cls === cls.id && slots[r.id] && slots[r.id].count > 0);
         if(!clsRoles.length) return;
-
-        let value = '';
         clsRoles.forEach(r => {
-          const count = slots[r.id]?.count || 0;
           const asgn = assignments[r.id] || [];
-          value += `└ ${r.label} (${asgn.length}/${count})\n`;
-          if(asgn.length === 0){
-            value += `\u00a0\u00a0\u2014\n`;
-          } else {
-            asgn.forEach(a => {
-              const p = (players||[]).find(pl => pl.discord_id === a.discordId);
-              const name = p ? p.name : '?';
-              const weapon = a.weapon ? ` \u2014 ${a.weapon}` : '';
-              value += `\u00a0\u00a0${name}${weapon}\n`;
-            });
-          }
-        });
-
-        compFields.push({
-          name: cls.label,
-          value: value.slice(0, 1024) || '\u2014',
-          inline: true
+          if(asgn.length === 0) return;
+          const label = r.label.padEnd(14);
+          asgn.forEach((a, i) => {
+            const p = (players||[]).find(pl => pl.discord_id === a.discordId);
+            const name = p ? p.name : '?';
+            const weapon = a.weapon ? `- ${a.weapon}` : '';
+            if(i === 0){
+              compStr += `\`${label}\` ${name.padEnd(12)} ${weapon}\n`;
+            } else {
+              compStr += `\`${' '.repeat(14)}\` ${name.padEnd(12)} ${weapon}\n`;
+            }
+          });
         });
       });
-
-      // Separateur invisible tous les 3 fields pour forcer retour a la ligne
-      const fieldsWithBreaks = [];
-      compFields.forEach((f, i) => {
-        fieldsWithBreaks.push(f);
-        if((i + 1) % 2 === 0 && i + 1 < compFields.length){
-          fieldsWithBreaks.push({ name: '\u200b', value: '\u200b', inline: false });
-        }
-      });
-      compFields = fieldsWithBreaks;
     }
   }
 
-  if(compFields.length === 0){
-    compFields = [{ name: 'Composition', value: '_Aucune composition chargee_', inline: false }];
-  }
+  if(!compStr) compStr = '_Aucune composition chargée_';
 
   const embed = new EmbedBuilder()
     .setTitle(`⚔️ ${event.title}`)
     .setColor(0x5865F2)
-    .addFields({ name: `Presences \u2014 ${countStr}`, value: presenceLine.slice(0, 1024), inline: false })
-    .addFields(...compFields);
+    .addFields(
+      { name: `Présences — ${countStr}`, value: presenceLine.slice(0, 1024), inline: false },
+      { name: 'Composition', value: compStr.slice(0, 1024) || '—', inline: false }
+    );
 
   if(event.event_date) embed.setDescription(`📅 ${event.event_date}`);
   embed.setFooter({ text: `Event ID: ${eventId}` });
@@ -206,7 +187,6 @@ client.on('interactionCreate', async interaction => {
       const discordId = interaction.user.id;
       const { data: player } = await supabase
         .from('players').select('*').eq('discord_id', discordId).single();
-
       if(player){
         return interaction.reply({
           content: `👤 **${player.name}**\nRoles : ${player.roles.length > 0 ? player.roles.join(', ') : 'aucun role defini'}`,
