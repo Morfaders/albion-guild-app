@@ -1,11 +1,9 @@
 if(process.env.NODE_ENV !== 'production') require('dotenv').config();
-const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { createClient } = require('@supabase/supabase-js');
-const puppeteer = require('puppeteer');
-// Connexion Supabase
+
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-// Connexion Discord
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -14,7 +12,6 @@ const client = new Client({
   ]
 });
 
-// Définition des slash commands
 const commands = [
   {
     name: 'ping',
@@ -27,24 +24,23 @@ const commands = [
       {
         name: 'titre',
         description: 'Titre de l\'événement (ex: ZvZ Vendredi Soir)',
-        type: 3, // STRING
+        type: 3,
         required: true,
       },
       {
         name: 'date',
         description: 'Date et heure (ex: Vendredi 20h30)',
-        type: 3, // STRING
+        type: 3,
         required: true,
       }
     ]
   },
   {
     name: 'profil',
-    description: 'Voir ou créer ton profil de joueur',
+    description: 'Voir ton profil de joueur',
   }
 ];
 
-// Enregistre les commandes sur Discord au démarrage
 async function registerCommands() {
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   try {
@@ -59,13 +55,169 @@ async function registerCommands() {
   }
 }
 
-// Bot prêt
+// ============================================================
+// GÉNÈRE L'EMBED COMPLET D'UN EVENT
+// ============================================================
+async function buildEventEmbed(eventId) {
+  // Charge toutes les données nécessaires
+  const [
+    { data: event },
+    { data: players },
+    { data: presData },
+    { data: asgData },
+    { data: classes },
+    { data: roles },
+  ] = await Promise.all([
+    supabase.from('events').select('*').eq('id', eventId).single(),
+    supabase.from('players').select('*'),
+    supabase.from('presences').select('*').eq('event_id', eventId),
+    supabase.from('assignments').select('*').eq('event_id', eventId),
+    supabase.from('classes_def').select('*').order('sort_order'),
+    supabase.from('roles_def').select('*').order('sort_order'),
+  ]);
+
+  if(!event) return null;
+
+  // Map présences par discord_id
+  const presence = {};
+  (presData||[]).forEach(p => { presence[p.discord_id] = p.status; });
+
+  // Map assignations par role_id
+  const assignments = {};
+  (asgData||[]).forEach(a => {
+    if(!assignments[a.role_id]) assignments[a.role_id] = [];
+    assignments[a.role_id].push({ discordId: a.discord_id, weapon: a.weapon||'' });
+  });
+
+  // IDs assignés en comp
+  const assignedIds = new Set((asgData||[]).map(a => a.discord_id));
+
+  // ── ZONE PRÉSENCES ──
+  const stIco = (did) => {
+    const s = presence[did]||'none';
+    return s==='present'?'🟢':s==='maybe'?'🟡':s==='absent'?'❌':'⚫';
+  };
+
+  const free = (players||[]).filter(p => !assignedIds.has(p.discord_id));
+  const assigned = (players||[]).filter(p => assignedIds.has(p.discord_id));
+
+  const sortByStatus = (a, b) => {
+    const o = { present:0, maybe:1, none:2, absent:3 };
+    return (o[presence[a.discord_id]||'none']) - (o[presence[b.discord_id]||'none']);
+  };
+
+  free.sort(sortByStatus);
+  assigned.sort(sortByStatus);
+
+  const freeStr = free.length
+    ? free.map(p => `${stIco(p.discord_id)}${p.name}`).join(' ')
+    : '_aucun_';
+
+  const assignedStr = assigned.length
+    ? assigned.map(p => `${stIco(p.discord_id)}${p.name}`).join(' ')
+    : '';
+
+  let presenceLine = freeStr;
+  if(assignedStr){
+    presenceLine += '\n─────────────────────────\n' + assignedStr;
+  }
+
+  // Compteurs
+  const counts = { present:0, maybe:0, absent:0 };
+  (presData||[]).forEach(p => { if(counts[p.status]!==undefined) counts[p.status]++; });
+  const countStr = `🟢 ${counts.present}  🟡 ${counts.maybe}  ❌ ${counts.absent}`;
+
+  // ── ZONE COMPOSITION ──
+  let compStr = '';
+  if(event.comp_id){
+    const { data: comp } = await supabase.from('comps').select('*').eq('id', event.comp_id).single();
+    if(comp && comp.slots){
+      const slots = comp.slots;
+      (classes||[]).forEach(cls => {
+        const clsRoles = (roles||[]).filter(r => r.cls === cls.id && slots[r.id]);
+        if(!clsRoles.length) return;
+
+        compStr += `\n**${cls.label}**\n`;
+        clsRoles.forEach(r => {
+          const slotDef = slots[r.id];
+          const count = slotDef?.count || 0;
+          const asgn = assignments[r.id] || [];
+          compStr += `  └ ${r.label} (${asgn.length}/${count})\n`;
+          if(asgn.length === 0){
+            compStr += `      —\n`;
+          } else {
+            asgn.forEach(a => {
+              const p = (players||[]).find(pl => pl.discord_id === a.discordId);
+              const name = p ? p.name : '?';
+              const weapon = a.weapon ? ` — ${a.weapon}` : '';
+              compStr += `      ${name}${weapon}\n`;
+            });
+          }
+        });
+      });
+    }
+  }
+
+  if(!compStr) compStr = '_Aucune composition chargée — utilise le bouton Gérer la comp_';
+
+  // ── CONSTRUCTION EMBED ──
+  const embed = new EmbedBuilder()
+    .setTitle(`⚔️ ${event.title}`)
+    .setColor(0x5865F2)
+    .addFields(
+      {
+        name: `Présences — ${countStr}`,
+        value: presenceLine.slice(0, 1024) || '—',
+      },
+      {
+        name: 'Composition',
+        value: compStr.slice(0, 1024) || '—',
+      }
+    );
+
+  if(event.event_date){
+    embed.setDescription(`📅 ${event.event_date}`);
+  }
+
+  embed.setFooter({ text: `Event ID: ${eventId} · Gérer via le bouton ci-dessous` });
+
+  return embed;
+}
+
+// ============================================================
+// MET À JOUR LE MESSAGE DISCORD AVEC LE NOUVEL EMBED
+// ============================================================
+async function updateEventMessage(eventId) {
+  const { data: event } = await supabase
+    .from('events')
+    .select('discord_message_id, discord_channel_id')
+    .eq('id', eventId)
+    .single();
+
+  if(!event?.discord_message_id) return;
+
+  try {
+    const embed = await buildEventEmbed(eventId);
+    if(!embed) return;
+    const channel = await client.channels.fetch(event.discord_channel_id);
+    const msg = await channel.messages.fetch(event.discord_message_id);
+    await msg.edit({ embeds: [embed] });
+  } catch(err) {
+    console.error('Erreur update message:', err.message);
+  }
+}
+
+// ============================================================
+// BOT READY
+// ============================================================
 client.once('ready', async () => {
   console.log(`✅ Bot connecté en tant que ${client.user.tag}`);
   await registerCommands();
 });
 
-// Gestion des interactions
+// ============================================================
+// INTERACTIONS
+// ============================================================
 client.on('interactionCreate', async interaction => {
 
   // --- SLASH COMMANDS ---
@@ -87,7 +239,7 @@ client.on('interactionCreate', async interaction => {
 
       if (player) {
         await interaction.reply({
-          content: `👤 Ton profil : **${player.name}**\nRôles : ${player.roles.length > 0 ? player.roles.join(', ') : 'aucun rôle défini'}`,
+          content: `👤 **${player.name}**\nRôles : ${player.roles.length > 0 ? player.roles.join(', ') : 'aucun rôle défini'}`,
           ephemeral: true
         });
       } else {
@@ -103,7 +255,6 @@ client.on('interactionCreate', async interaction => {
       const titre = interaction.options.getString('titre');
       const date = interaction.options.getString('date');
 
-      // Crée l'événement en BDD
       const { data: event, error } = await supabase
         .from('events')
         .insert({ title: titre, event_date: date })
@@ -115,14 +266,7 @@ client.on('interactionCreate', async interaction => {
         return;
       }
 
-      // Poste le message avec les boutons
-      const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
-
-      const embed = new EmbedBuilder()
-        .setTitle(`⚔️ ${titre}`)
-        .setDescription(`📅 ${date}\n\n_Clique sur un bouton pour indiquer ta présence._`)
-        .setColor(0x5865F2)
-        .setFooter({ text: `Event ID: ${event.id}` });
+      const embed = await buildEventEmbed(event.id);
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -138,9 +282,9 @@ client.on('interactionCreate', async interaction => {
           .setLabel('✕ Absent')
           .setStyle(ButtonStyle.Danger),
         new ButtonBuilder()
-            .setLabel('🛠 Gérer la comp')
-            .setStyle(ButtonStyle.Link)
-            .setURL(`${process.env.WEBAPP_URL}?event_id=${event.id}`)
+          .setLabel('🛠 Gérer la comp')
+          .setStyle(ButtonStyle.Link)
+          .setURL(`${process.env.WEBAPP_URL}?event_id=${event.id}`)
       );
 
       const msg = await interaction.reply({
@@ -149,7 +293,6 @@ client.on('interactionCreate', async interaction => {
         fetchReply: true
       });
 
-      // Sauvegarde l'ID du message Discord dans la BDD
       await supabase
         .from('events')
         .update({
@@ -167,10 +310,9 @@ client.on('interactionCreate', async interaction => {
 
     const discordId = interaction.user.id;
 
-    // Defer pour avoir plus de temps (génération image peut prendre ~5s)
     await interaction.deferReply({ ephemeral: true });
 
-    // Met à jour la présence en BDD
+    // Met à jour la présence
     await supabase
       .from('presences')
       .upsert({
@@ -179,38 +321,8 @@ client.on('interactionCreate', async interaction => {
         status: action
       });
 
-    // Génère l'image
-    let imageBuffer = null;
-    try {
-      imageBuffer = await generateEventImage(parseInt(eventId));
-    } catch(err) {
-      console.error('Erreur génération image:', err.message);
-    }
-
-    // Met à jour l'embed Discord avec la nouvelle image
-    if(imageBuffer){
-      const { AttachmentBuilder } = require('discord.js');
-      const attachment = new AttachmentBuilder(imageBuffer, { name: 'event.png' });
-
-      // Récupère le message original pour le modifier
-      const event = await supabase
-        .from('events')
-        .select('discord_message_id, discord_channel_id')
-        .eq('id', eventId)
-        .single();
-
-      if(event.data?.discord_message_id){
-        try {
-          const channel = await client.channels.fetch(event.data.discord_channel_id);
-          const msg = await channel.messages.fetch(event.data.discord_message_id);
-          await msg.edit({ files: [attachment] });
-        } catch(err) {
-          console.error('Erreur update message:', err.message);
-        }
-      }
-    }
-
-    const statusLabel = action === 'present' ? '✅ présent(e)' : action === 'maybe' ? '🟡 peut-être' : '❌ absent(e)';
+    // Met à jour l'embed
+    await updateEventMessage(parseInt(eventId));
 
     // Récupère les stats
     const { data: presences } = await supabase
@@ -218,34 +330,16 @@ client.on('interactionCreate', async interaction => {
       .select('status')
       .eq('event_id', eventId);
 
-    const counts = { present: 0, maybe: 0, absent: 0 };
-    presences?.forEach(p => counts[p.status]++);
+    const counts = { present:0, maybe:0, absent:0 };
+    presences?.forEach(p => { if(counts[p.status]!==undefined) counts[p.status]++; });
+
+    const statusLabel = action==='present' ? '✅ présent(e)' : action==='maybe' ? '🟡 peut-être' : '❌ absent(e)';
 
     await interaction.editReply({
-      content: `Tu es marqué(e) **${statusLabel}**.\n🟢 ${counts.present} présents · 🟡 ${counts.maybe} peut-être · 🔴 ${counts.absent} absents`,
+      content: `Tu es marqué(e) **${statusLabel}**.\n🟢 ${counts.present} présents · 🟡 ${counts.maybe} peut-être · ❌ ${counts.absent} absents`,
     });
   }
-
-// Lance le bot
 });
-
-// Génère un screenshot de la webapp
-async function generateEventImage(eventId) {
-  const browser = await puppeteer.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    headless: 'new'
-  });
-  const page = await browser.newPage();
-  await page.setViewport({ width: 900, height: 500 });
-  await page.goto(
-    `${process.env.WEBAPP_URL}?event_id=${eventId}&render=true`,
-    { waitUntil: 'networkidle0', timeout: 15000 }
-  );
-  await page.waitForSelector('#presence-list', { timeout: 10000 });
-  const screenshot = await page.screenshot({ type: 'png', fullPage: false });
-  await browser.close();
-  return screenshot;
-}
 
 // Lance le bot
 client.login(process.env.DISCORD_TOKEN);
