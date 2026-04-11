@@ -13,58 +13,32 @@ const client = new Client({
 });
 
 const commands = [
-  {
-    name: 'ping',
-    description: 'Vérifie que le bot fonctionne',
-  },
+  { name: 'ping', description: 'Vérifie que le bot fonctionne' },
   {
     name: 'event',
     description: 'Crée un événement actif',
     options: [
-      {
-        name: 'titre',
-        description: 'Titre de l\'événement (ex: ZvZ Vendredi Soir)',
-        type: 3,
-        required: true,
-      },
-      {
-        name: 'date',
-        description: 'Date et heure (ex: Vendredi 20h30)',
-        type: 3,
-        required: true,
-      },
-      {
-        name: 'comp',
-        description: 'ID de la composition',
-        type: 4,
-        required: false,
-      }
+      { name: 'titre', description: 'Titre', type: 3, required: true },
+      { name: 'date', description: 'Date', type: 3, required: true },
+      { name: 'comp', description: 'ID comp', type: 4, required: false }
     ]
   },
-  {
-    name: 'profil',
-    description: 'Voir ton profil de joueur',
-  }
+  { name: 'profil', description: 'Voir ton profil' }
 ];
 
 async function registerCommands() {
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
-  try {
-    console.log('Enregistrement des slash commands...');
-    await rest.put(
-      Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-      { body: commands }
-    );
-    console.log('✅ Slash commands enregistrées !');
-  } catch (error) {
-    console.error('Erreur enregistrement commands:', error);
-  }
+  await rest.put(
+    Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+    { body: commands }
+  );
 }
 
 // ============================================================
-// GÉNÈRE L'EMBED COMPLET D'UN EVENT
+// EMBED EVENT
 // ============================================================
 async function buildEventEmbed(eventId) {
+
   const [
     { data: event },
     { data: players },
@@ -83,8 +57,9 @@ async function buildEventEmbed(eventId) {
 
   if(!event) return null;
 
+  // ===== PRÉSENCE =====
   const presence = {};
-  (presData||[]).forEach(p => { presence[p.discord_id] = p.status; });
+  (presData||[]).forEach(p => presence[p.discord_id] = p.status);
 
   const assignments = {};
   (asgData||[]).forEach(a => {
@@ -94,77 +69,105 @@ async function buildEventEmbed(eventId) {
 
   const assignedIds = new Set((asgData||[]).map(a => a.discord_id));
 
-  // ── ZONE PRÉSENCES ──
-  const stIco = (did) => {
-    const s = presence[did]||'none';
+  const stIco = (id) => {
+    const s = presence[id]||'none';
     return s==='present'?'🟢':s==='maybe'?'🟡':s==='absent'?'❌':'⚫';
   };
 
-  const sortByStatus = (a, b) => {
-    const o = { present:0, maybe:1, none:2, absent:3 };
-    return (o[presence[a.discord_id]||'none']) - (o[presence[b.discord_id]||'none']);
-  };
+  const free = (players||[]).filter(p => !assignedIds.has(p.discord_id));
+  const assigned = (players||[]).filter(p => assignedIds.has(p.discord_id));
 
-  const free = (players||[]).filter(p => !assignedIds.has(p.discord_id)).sort(sortByStatus);
-  const assigned = (players||[]).filter(p => assignedIds.has(p.discord_id)).sort(sortByStatus);
-
-  const freeStr = free.length
-    ? free.map(p => `${stIco(p.discord_id)}${p.name}`).join(' ')
-    : '_aucun_';
-
-  const assignedStr = assigned.length
-    ? assigned.map(p => `${stIco(p.discord_id)}${p.name}`).join(' ')
-    : '';
+  const freeStr = free.length ? free.map(p => `${stIco(p.discord_id)}${p.name}`).join(' ') : '_aucun_';
+  const assignedStr = assigned.length ? assigned.map(p => `${stIco(p.discord_id)}${p.name}`).join(' ') : '';
 
   let presenceLine = freeStr;
   if(assignedStr){
-    presenceLine += '\n─────────────────────────\n' + assignedStr;
+    presenceLine += '\n────────────\n' + assignedStr;
   }
 
   const counts = { present:0, maybe:0, absent:0 };
   (presData||[]).forEach(p => { if(counts[p.status]!==undefined) counts[p.status]++; });
   const countStr = `🟢 ${counts.present}  🟡 ${counts.maybe}  ❌ ${counts.absent}`;
 
-  // ── ZONE COMPOSITION ──
-  let compStr = '';
+  // ===== COMPOSITION =====
+  const CLASS_EMOJIS = {
+    tank: '🛡️',
+    heal: '💚',
+    dps: '⚔️'
+  };
+
+  let compFields = [];
+
   if(event.comp_id){
-    const { data: comp } = await supabase.from('comps').select('*').eq('id', event.comp_id).single();
+    const { data: comp } = await supabase
+      .from('comps')
+      .select('*')
+      .eq('id', event.comp_id)
+      .single();
+
     if(comp && comp.slots){
       const slots = comp.slots;
+
       (classes||[]).forEach(cls => {
-        const clsRoles = (roles||[]).filter(r => r.cls === cls.id && slots[r.id] && slots[r.id].count > 0);
+
+        const clsRoles = (roles||[]).filter(r =>
+          r.cls === cls.id &&
+          slots[r.id] &&
+          slots[r.id].count > 0
+        );
+
         if(!clsRoles.length) return;
 
-        compStr += `\n**${cls.label}**\n`;
+        let value = '';
+
         clsRoles.forEach(r => {
-          const slotDef = slots[r.id];
-          const count = slotDef?.count || 0;
+          const count = slots[r.id]?.count || 0;
           const asgn = assignments[r.id] || [];
-          compStr += `  └ ${r.label} (${asgn.length}/${count})\n`;
+
+          value += `└ ${r.label} (${asgn.length}/${count})\n`;
+
           if(asgn.length === 0){
-            compStr += `\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0—\n`;
+            value += `      —\n`;
           } else {
             asgn.forEach(a => {
-              const p = (players||[]).find(pl => pl.discord_id === a.discordId);
+              const p = players.find(pl => pl.discord_id === a.discordId);
               const name = p ? p.name : '?';
               const weapon = a.weapon ? ` — ${a.weapon}` : '';
-              compStr += `\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0${name}${weapon}\n`;
+              value += `      ${name}${weapon}\n`;
             });
           }
         });
+
+        const emoji = CLASS_EMOJIS[cls.id] || '🎯';
+
+        compFields.push({
+          name: `${emoji} ${cls.label}`,
+          value: value || '—',
+          inline: true
+        });
+
       });
     }
   }
 
-  if(!compStr) compStr = '_Aucune composition chargée_';
+  if(compFields.length === 0){
+    compFields.push({
+      name: 'Composition',
+      value: '_Aucune composition chargée_',
+      inline: false
+    });
+  }
 
+  // ===== EMBED =====
   const embed = new EmbedBuilder()
     .setTitle(`⚔️ ${event.title}`)
     .setColor(0x5865F2)
-    .addFields(
-      { name: `Présences — ${countStr}`, value: presenceLine.slice(0, 1024) || '—' },
-      { name: 'Composition', value: compStr.slice(0, 1024) || '—' }
-    );
+    .addFields({
+      name: `Présences — ${countStr}`,
+      value: presenceLine.slice(0,1024),
+      inline: false
+    })
+    .addFields(compFields);
 
   if(event.event_date){
     embed.setDescription(`📅 ${event.event_date}`);
@@ -176,7 +179,7 @@ async function buildEventEmbed(eventId) {
 }
 
 // ============================================================
-// MET À JOUR LE MESSAGE DISCORD
+// UPDATE MESSAGE
 // ============================================================
 async function updateEventMessage(eventId) {
   const { data: event } = await supabase
@@ -187,37 +190,18 @@ async function updateEventMessage(eventId) {
 
   if(!event?.discord_message_id) return;
 
-  try {
-    const embed = await buildEventEmbed(eventId);
-    if(!embed) return;
-    const channel = await client.channels.fetch(event.discord_channel_id);
-    const msg = await channel.messages.fetch(event.discord_message_id);
-    await msg.edit({ embeds: [embed] });
-  } catch(err) {
-    console.error('Erreur update message:', err.message);
-  }
+  const embed = await buildEventEmbed(eventId);
+  const channel = await client.channels.fetch(event.discord_channel_id);
+  const msg = await channel.messages.fetch(event.discord_message_id);
+  await msg.edit({ embeds: [embed] });
 }
 
 // ============================================================
-// BOT READY
+// READY
 // ============================================================
 client.once('ready', async () => {
-  console.log(`✅ Bot connecté en tant que ${client.user.tag}`);
+  console.log(`✅ ${client.user.tag}`);
   await registerCommands();
-
-  // Realtime — écoute les changements d'assignation depuis la webapp
-  // On écoute INSERT et DELETE pour couvrir ajout ET suppression
-  supabase
-    .channel('bot-assignments')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'assignments' }, async (payload) => {
-      const eventId = payload.new?.event_id;
-      if(eventId) await updateEventMessage(eventId);
-    })
-    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'assignments' }, async (payload) => {
-      const eventId = payload.old?.event_id;
-      if(eventId) await updateEventMessage(eventId);
-    })
-    .subscribe();
 });
 
 // ============================================================
@@ -227,111 +211,34 @@ client.on('interactionCreate', async interaction => {
 
   if (interaction.isChatInputCommand()) {
 
-    // /ping
     if (interaction.commandName === 'ping') {
-      await interaction.reply({ content: '🏓 Pong ! Le bot fonctionne.', ephemeral: true });
+      return interaction.reply({ content: 'pong', ephemeral: true });
     }
 
-    // /profil
-    if (interaction.commandName === 'profil') {
-      const discordId = interaction.user.id;
-      const { data: player } = await supabase
-        .from('players')
-        .select('*')
-        .eq('discord_id', discordId)
-        .single();
-
-      if (player) {
-        await interaction.reply({
-          content: `👤 **${player.name}**\nRôles : ${player.roles.length > 0 ? player.roles.join(', ') : 'aucun rôle défini'}`,
-          ephemeral: true
-        });
-      } else {
-        await interaction.reply({
-          content: `❌ Tu n'as pas encore de profil. Un raid lead doit t'ajouter via la web app.`,
-          ephemeral: true
-        });
-      }
-    }
-
-    // /event
     if (interaction.commandName === 'event') {
       const titre = interaction.options.getString('titre');
       const date = interaction.options.getString('date');
       const compId = interaction.options.getInteger('comp') || null;
 
-      const { data: event, error } = await supabase
+      const { data: event } = await supabase
         .from('events')
         .insert({ title: titre, event_date: date, comp_id: compId })
         .select()
         .single();
 
-      if (error) {
-        await interaction.reply({ content: '❌ Erreur lors de la création.', ephemeral: true });
-        return;
-      }
-
       const embed = await buildEventEmbed(event.id);
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`present_${event.id}`)
-          .setLabel('✓ Je suis là')
-          .setStyle(ButtonStyle.Success),
-        new ButtonBuilder()
-          .setCustomId(`maybe_${event.id}`)
-          .setLabel('? Peut-être')
-          .setStyle(ButtonStyle.Primary),
-        new ButtonBuilder()
-          .setCustomId(`absent_${event.id}`)
-          .setLabel('✕ Absent')
-          .setStyle(ButtonStyle.Danger),
-        new ButtonBuilder()
-          .setLabel('🛠 Gérer la comp')
-          .setStyle(ButtonStyle.Link)
-          .setURL(`${process.env.WEBAPP_URL}?event_id=${event.id}`)
-      );
 
       const msg = await interaction.reply({
         embeds: [embed],
-        components: [row],
         fetchReply: true
       });
 
-      await supabase
-        .from('events')
-        .update({
-          discord_message_id: msg.id,
-          discord_channel_id: msg.channelId
-        })
-        .eq('id', event.id);
+      await supabase.from('events').update({
+        discord_message_id: msg.id,
+        discord_channel_id: msg.channelId
+      }).eq('id', event.id);
     }
-  }
-
-  // --- BOUTONS DE PRÉSENCE ---
-  if (interaction.isButton()) {
-    const [action, eventId] = interaction.customId.split('_');
-    if (!['present', 'maybe', 'absent'].includes(action)) return;
-
-    const discordId = interaction.user.id;
-
-    // Acknowledge silencieusement — pas de message visible
-    await interaction.deferUpdate();
-
-    // Met à jour la présence
-    await supabase
-      .from('presences')
-      .upsert({
-        event_id: parseInt(eventId),
-        discord_id: discordId,
-        status: action
-      });
-
-    // Met à jour l'embed directement
-    await updateEventMessage(parseInt(eventId));
   }
 });
 
 client.login(process.env.DISCORD_TOKEN);
-
-
