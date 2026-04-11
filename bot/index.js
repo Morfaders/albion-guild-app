@@ -227,4 +227,25 @@ client.on('interactionCreate', async interaction => {
   }
 
 // Lance le bot
+});
+
+// Génère un screenshot de la webapp
+async function generateEventImage(eventId) {
+  const browser = await puppeteer.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    headless: 'new'
+  });
+  const page = await browser.newPage();
+  await page.setViewport({ width: 900, height: 500 });
+  await page.goto(
+    `${process.env.WEBAPP_URL}?event_id=${eventId}&render=true`,
+    { waitUntil: 'networkidle0', timeout: 15000 }
+  );
+  await page.waitForSelector('#presence-list', { timeout: 10000 });
+  const screenshot = await page.screenshot({ type: 'png', fullPage: false });
+  await browser.close();
+  return screenshot;
+}
+
+// Lance le bot
 client.login(process.env.DISCORD_TOKEN);
