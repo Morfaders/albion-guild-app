@@ -1,7 +1,7 @@
 if(process.env.NODE_ENV !== 'production') require('dotenv').config();
 const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
 const { createClient } = require('@supabase/supabase-js');
-
+const puppeteer = require('puppeteer');
 // Connexion Supabase
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
@@ -167,6 +167,9 @@ client.on('interactionCreate', async interaction => {
 
     const discordId = interaction.user.id;
 
+    // Defer pour avoir plus de temps (génération image peut prendre ~5s)
+    await interaction.deferReply({ ephemeral: true });
+
     // Met à jour la présence en BDD
     await supabase
       .from('presences')
@@ -176,7 +179,40 @@ client.on('interactionCreate', async interaction => {
         status: action
       });
 
-    // Récupère les stats de présence
+    // Génère l'image
+    let imageBuffer = null;
+    try {
+      imageBuffer = await generateEventImage(parseInt(eventId));
+    } catch(err) {
+      console.error('Erreur génération image:', err.message);
+    }
+
+    // Met à jour l'embed Discord avec la nouvelle image
+    if(imageBuffer){
+      const { AttachmentBuilder } = require('discord.js');
+      const attachment = new AttachmentBuilder(imageBuffer, { name: 'event.png' });
+
+      // Récupère le message original pour le modifier
+      const event = await supabase
+        .from('events')
+        .select('discord_message_id, discord_channel_id')
+        .eq('id', eventId)
+        .single();
+
+      if(event.data?.discord_message_id){
+        try {
+          const channel = await client.channels.fetch(event.data.discord_channel_id);
+          const msg = await channel.messages.fetch(event.data.discord_message_id);
+          await msg.edit({ files: [attachment] });
+        } catch(err) {
+          console.error('Erreur update message:', err.message);
+        }
+      }
+    }
+
+    const statusLabel = action === 'present' ? '✅ présent(e)' : action === 'maybe' ? '🟡 peut-être' : '❌ absent(e)';
+
+    // Récupère les stats
     const { data: presences } = await supabase
       .from('presences')
       .select('status')
@@ -185,14 +221,10 @@ client.on('interactionCreate', async interaction => {
     const counts = { present: 0, maybe: 0, absent: 0 };
     presences?.forEach(p => counts[p.status]++);
 
-    const statusLabel = action === 'present' ? '✅ présent(e)' : action === 'maybe' ? '🟡 peut-être' : '❌ absent(e)';
-
-    await interaction.reply({
+    await interaction.editReply({
       content: `Tu es marqué(e) **${statusLabel}**.\n🟢 ${counts.present} présents · 🟡 ${counts.maybe} peut-être · 🔴 ${counts.absent} absents`,
-      ephemeral: true
     });
   }
-});
 
 // Lance le bot
 client.login(process.env.DISCORD_TOKEN);
