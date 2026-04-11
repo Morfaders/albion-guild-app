@@ -133,7 +133,7 @@ async function buildEventEmbed(eventId) {
       const fieldsWithBreaks = [];
       compFields.forEach((f, i) => {
         fieldsWithBreaks.push(f);
-        if((i + 1) % 3 === 0 && i + 1 < compFields.length){
+        if((i + 1) % 2 === 0 && i + 1 < compFields.length){
           fieldsWithBreaks.push({ name: '\u200b', value: '\u200b', inline: false });
         }
       });
