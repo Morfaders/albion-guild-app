@@ -140,7 +140,7 @@ client.on('interactionCreate', async interaction => {
         new ButtonBuilder()
             .setLabel('🛠 Gérer la comp')
             .setStyle(ButtonStyle.Link)
-            .setURL(`https://albion-guild.vercel.app?event_id=${event.id}`)
+            .setURL(`${process.env.WEBAPP_URL}?event_id=${event.id}`)
       );
 
       const msg = await interaction.reply({
