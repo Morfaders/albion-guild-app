@@ -32,6 +32,12 @@ const commands = [
         description: 'Date et heure (ex: Vendredi 20h30)',
         type: 3,
         required: true,
+      },
+      {
+        name: 'comp',
+        description: 'ID de la composition (visible dans l\'éditeur comp)',
+        type: 4,
+        required: false,
       }
     ]
   },
@@ -213,6 +219,18 @@ async function updateEventMessage(eventId) {
 client.once('ready', async () => {
   console.log(`✅ Bot connecté en tant que ${client.user.tag}`);
   await registerCommands();
+  // Écoute les changements d'assignation depuis la webapp
+  supabase
+    .channel('bot-assignments')
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'assignments'
+    }, async (payload) => {
+      const eventId = payload.new?.event_id || payload.old?.event_id;
+      if(eventId) await updateEventMessage(eventId);
+    })
+    .subscribe();
 });
 
 // ============================================================
@@ -255,11 +273,12 @@ client.on('interactionCreate', async interaction => {
       const titre = interaction.options.getString('titre');
       const date = interaction.options.getString('date');
 
-      const { data: event, error } = await supabase
-        .from('events')
-        .insert({ title: titre, event_date: date })
-        .select()
-        .single();
+        const compId = interaction.options.getInteger('comp') || null;
+        const { data: event, error } = await supabase
+            .from('events')
+            .insert({ title: titre, event_date: date, comp_id: compId })
+            .select()
+            .single();
 
       if (error) {
         await interaction.reply({ content: '❌ Erreur lors de la création.', ephemeral: true });
