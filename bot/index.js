@@ -203,7 +203,7 @@ client.on('interactionCreate', async interaction => {
     if(interaction.commandName === 'event'){
       const titre = interaction.options.getString('titre');
       const date = interaction.options.getString('date');
-      const compId = interaction.options.getInteger('comp') || null;
+      const compId = interaction.options.getInteger('comp') ?? 1;
 
       const { data: event, error } = await supabase
         .from('events')
