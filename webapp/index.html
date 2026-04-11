@@ -304,6 +304,35 @@ async function init(){
 
   // Si on arrive avec un event_id, ouvrir directement l'événement
   if(currentEventId) showView('event');
+  // Realtime — écoute les changements si on a un event actif
+  if(currentEventId){
+    sb.channel('event-'+currentEventId)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'presences',
+        filter: `event_id=eq.${currentEventId}`
+      }, () => {
+        loadEventData(currentEventId).then(()=>renderPresence());
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'assignments',
+        filter: `event_id=eq.${currentEventId}`
+      }, () => {
+        loadEventData(currentEventId).then(()=>{ renderComp(); renderPresence(); });
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'flagged',
+        filter: `event_id=eq.${currentEventId}`
+      }, () => {
+        loadEventData(currentEventId).then(()=>renderPresence());
+      })
+      .subscribe();
+  }
 }
 
 async function loadClasses(){
