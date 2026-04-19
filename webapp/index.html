@@ -92,16 +92,17 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .modal-player-opt:hover{background:var(--bg3);border-color:var(--border);}
 .modal-player-opt.selected{background:rgba(88,101,242,.1);border-color:var(--accent);}
 .modal-player-opt.dimmed{opacity:.4;pointer-events:none;}
-.modal-player-opt.used{opacity:.6;}
+.modal-player-opt.used{opacity:.65;}
+.modal-player-opt.me-first{border-color:rgba(255,255,255,0.25);background:rgba(255,255,255,0.04);}
 .weapon-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 12px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;}
 .weapon-input:focus{border-color:var(--accent);}
 .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .section-title{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:.05em;}
 .filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
 #modal-assign{position:fixed;display:none;background:var(--bg2);z-index:1000;border-radius:var(--r2);padding:16px;width:380px;box-shadow:0 10px 40px rgba(0,0,0,.7);border:1px solid var(--border2);}
-/* FIX 5 : search dans la modal assign */
-.modal-search{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:7px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;margin-bottom:10px;}
+.modal-search{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:7px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;margin-bottom:8px;}
 .modal-search:focus{border-color:var(--accent);}
+.assign-group-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:6px 10px 3px;}
 input[type=color]{width:38px;height:28px;border:1px solid var(--border2);border-radius:4px;padding:0;cursor:pointer;background:none;}
 ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
 .loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;letter-spacing:.05em;color:var(--text2);}
@@ -113,9 +114,8 @@ input[type=color]{width:38px;height:28px;border:1px solid var(--border2);border-
 .identity-banner.linked{background:rgba(61,220,132,.06);border:1px solid rgba(61,220,132,.3);color:#3ddc84;}
 .identity-banner.unlinked{background:rgba(240,192,64,.06);border:1px solid rgba(240,192,64,.3);color:#f0c040;cursor:pointer;}
 .identity-banner.unlinked:hover{background:rgba(240,192,64,.12);}
-/* séparateur de groupe dans la liste assign */
-.assign-group-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:6px 10px 3px;margin-top:4px;}
-
+/* FIX 4 : badge rôle caché global */
+.hidden-badge{font-size:9px;padding:1px 6px;border-radius:10px;background:rgba(180,120,240,.2);color:#b478f0;border:1px solid rgba(180,120,240,.35);margin-left:4px;vertical-align:middle;}
 body.render-mode .sidebar,body.render-mode .channel-header,body.render-mode [onclick="addTempRole()"],body.render-mode .btn-danger,body.render-mode .empty-slot,body.render-mode .chip-flag{display:none!important;}
 body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body.render-mode .content{max-width:100%;}
 </style>
@@ -142,14 +142,12 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
     <div class="channel-header"><span id="ch-icon">👤</span><span class="channel-name" id="ch-name">profils-joueurs</span></div>
     <div class="content">
 
-      <!-- PROFILES -->
       <div class="view active" id="view-profiles">
         <div class="section-head"><div class="section-title">Profils joueurs</div><button class="btn btn-primary btn-sm" onclick="openAddPlayer()">+ Ajouter</button></div>
         <div class="filter-row" id="filter-row"></div>
         <div class="player-grid" id="player-grid"></div>
       </div>
 
-      <!-- EVENT -->
       <div class="view" id="view-event">
         <div id="identity-banner-el"></div>
         <div id="event-banner" style="background:linear-gradient(135deg,#1a1f30,#1e2738);border:1px solid var(--border2);border-radius:var(--r2);padding:20px;margin-bottom:16px;">
@@ -173,7 +171,6 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
         <div id="temp-zone"></div>
       </div>
 
-      <!-- COMP EDITOR -->
       <div class="view" id="view-comps">
         <div class="section-head">
           <div class="section-title">Éditeur de composition</div>
@@ -188,7 +185,6 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
         <div id="comp-editor"></div>
       </div>
 
-      <!-- CLASSES & ROLES -->
       <div class="view" id="view-classes">
         <div class="section-head"><div class="section-title">Classes & Rôles</div><span style="font-size:11px;color:var(--text3);">Glissez pour réordonner — sauvegarde automatique</span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
@@ -219,12 +215,10 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
 
 <div id="modal-assign"></div>
 
-<!-- Modal identité -->
 <div id="modal-identity" class="modal">
   <div class="modal-box">
     <div class="modal-title">🎮 Mon identité</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Sélectionnez votre profil pour indiquer vos présences depuis la web app.</div>
-    <!-- FIX 5 : barre de recherche -->
     <input class="modal-search" id="identity-search" placeholder="🔍 Rechercher un joueur..." oninput="filterIdentityList(this.value)">
     <div id="identity-player-list" style="max-height:320px;overflow-y:auto;margin-bottom:12px;"></div>
     <div style="display:flex;gap:8px;justify-content:space-between;">
@@ -271,7 +265,7 @@ let newSelected=[],currentFilter='alpha';
 let pendingRoleId=null,pendingPlayerId=null,pendingIsTemp=false,pendingTempId=null;
 let currentEventId=null;
 
-// ── IDENTITÉ ──────────────────────────────────────────────
+// IDENTITE
 let myDiscordId=localStorage.getItem('myDiscordId')||null;
 let myPlayer=null;
 
@@ -283,24 +277,20 @@ function resolveMyPlayer(){
   renderSidebarIdentity();
 }
 function renderSidebarIdentity(){
-  const av=document.getElementById('sidebar-avatar');
-  const nm=document.getElementById('sidebar-name');
-  const st=document.getElementById('sidebar-status');
+  const av=document.getElementById('sidebar-avatar'),nm=document.getElementById('sidebar-name'),st=document.getElementById('sidebar-status');
   if(myPlayer){av.textContent=getInitials(myPlayer.name);av.style.background=myPlayer.color||'var(--accent)';nm.textContent=myPlayer.name;st.textContent='🟢 Identifié';st.style.color='#3ddc84';}
   else{av.textContent='?';av.style.background='var(--accent)';nm.textContent='Non identifié';st.textContent='Cliquez pour vous identifier';st.style.color='var(--text3)';}
 }
 function renderIdentityBanner(){
-  const el=document.getElementById('identity-banner-el'); if(!el) return;
+  const el=document.getElementById('identity-banner-el');if(!el)return;
   if(myPlayer){
     const st=presence[myPlayer.discord_id]||'none';
     const stTxt=st==='present'?'🟢 Présent':st==='maybe'?'🟡 Peut-être':st==='absent'?'❌ Absent':'⚫ Non renseigné';
     el.innerHTML=`<div class="identity-banner linked">${avatarEl(myPlayer.name,myPlayer.color||'#5865F2',22)}<span style="color:var(--text);font-weight:500;">${myPlayer.name}</span><span style="margin-left:4px;font-size:11px;">${stTxt}</span><span style="margin-left:auto;font-size:11px;opacity:.5;cursor:pointer;" onclick="openIdentityModal()">Changer</span></div>`;
-  } else {
+  }else{
     el.innerHTML=`<div class="identity-banner unlinked" onclick="openIdentityModal()"><span>⚠️</span><span>Vous n'êtes pas identifié — <u>cliquez ici</u> pour indiquer vos présences.</span></div>`;
   }
 }
-
-// FIX 5 : ouvre la modal et reset la recherche
 function openIdentityModal(){
   document.getElementById('identity-search').value='';
   renderIdentityPlayerList('');
@@ -319,14 +309,14 @@ function renderIdentityPlayerList(query){
 }
 function filterIdentityList(q){renderIdentityPlayerList(q);}
 function selectIdentity(discordId){
-  myDiscordId=discordId; localStorage.setItem('myDiscordId',discordId);
+  myDiscordId=discordId;localStorage.setItem('myDiscordId',discordId);
   myPlayer=players.find(p=>p.discord_id===discordId)||null;
-  closeIdentityModal(); renderSidebarIdentity(); renderIdentityBanner();
+  closeIdentityModal();renderSidebarIdentity();renderIdentityBanner();
 }
 function clearIdentity(){myDiscordId=null;myPlayer=null;localStorage.removeItem('myDiscordId');closeIdentityModal();renderSidebarIdentity();renderIdentityBanner();}
 function closeIdentityModal(){document.getElementById('modal-identity').classList.remove('open');}
 
-// ── INIT ──────────────────────────────────────────────────
+// INIT
 async function init(){
   const params=new URLSearchParams(window.location.search);
   currentEventId=params.get('event_id')?parseInt(params.get('event_id')):null;
@@ -372,7 +362,7 @@ function renderEventCompBadge(compId){
   el.innerHTML=comp?`<div class="comp-badge">🗂 Comp : <span class="comp-badge-name">${comp.name}</span></div>`:'<span style="font-size:12px;color:var(--text3);">Comp introuvable</span>';
 }
 
-// ── HELPERS ───────────────────────────────────────────────
+// HELPERS
 function getInitials(n){return n.slice(0,2).toUpperCase();}
 function roleDef(id){return ROLES_DEF.find(r=>r.id===id);}
 function classDef(id){return CLASSES_DEF.find(c=>c.id===id);}
@@ -380,7 +370,16 @@ function avatarEl(name,color,size=34){return `<div style="width:${size}px;height
 function visibleSlots(rid){const slotDef=currentComp?.slots?.[rid];const count=slotDef?slotDef.count:0;const strict=slotDef?slotDef.strict:false;const assigned=(assignments[rid]||[]).length;if(strict)return count;return Math.max(count,assigned+1);}
 function getAssignedRole(pid){for(const[rid,arr]of Object.entries(assignments)){if(arr.some(a=>a.playerId===pid))return roleDef(rid);}return null;}
 
-// ── NAVIGATION ────────────────────────────────────────────
+// FIX 3 : statut texte lisible
+function presenceStatusText(discordId){
+  const s=presence[discordId]||'none';
+  if(s==='present')return{ico:'🟢',txt:'Disponible',color:'#3ddc84'};
+  if(s==='maybe') return{ico:'🟡',txt:'Peut-être',color:'#f0c040'};
+  if(s==='absent')return{ico:'🔴',txt:'Absent',color:'#f04747'};
+  return{ico:'⚫',txt:'?',color:'var(--text3)'};
+}
+
+// NAVIGATION
 const CH_META={profiles:['👤','profils-joueurs'],event:['⚔️','événement-actif'],comps:['🛠️','éditeur-comp'],classes:['🎨','classes-rôles']};
 function showView(v){
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
@@ -388,15 +387,11 @@ function showView(v){
   document.getElementById('view-'+v).classList.add('active');
   document.getElementById('nav-'+v).classList.add('active');
   const[ico,name]=CH_META[v]||['📋',v];
-  document.getElementById('ch-icon').textContent=ico;
-  document.getElementById('ch-name').textContent=name;
-  if(v==='profiles')renderProfiles();
-  if(v==='event')renderEvent();
-  if(v==='comps')renderCompEditor();
-  if(v==='classes')renderClassesEditor();
+  document.getElementById('ch-icon').textContent=ico;document.getElementById('ch-name').textContent=name;
+  if(v==='profiles')renderProfiles();if(v==='event')renderEvent();if(v==='comps')renderCompEditor();if(v==='classes')renderClassesEditor();
 }
 
-// ── PROFILES ──────────────────────────────────────────────
+// PROFILES
 function buildFilterRow(){
   const filters=[{id:'alpha',label:'A–Z',color:null},...CLASSES_DEF.map(c=>({id:c.id,label:c.label,color:c.color}))];
   document.getElementById('filter-row').innerHTML=filters.map(f=>`<button class="btn btn-sm ${currentFilter===f.id?'active':''}" style="${f.color&&currentFilter!==f.id?'color:'+f.color:''}" onclick="filterPlayers('${f.id}')">${f.label}</button>`).join('');
@@ -414,7 +409,13 @@ function renderProfiles(){
         <button class="btn btn-icon" onclick="editPlayerRoles(${p.id})">⚙️</button>
         <button class="btn btn-icon btn-danger" onclick="deletePlayer(${p.id})">✕</button>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;">${p.roles.map(rid=>{const r=roleDef(rid);return r?`<span class="role-pill" style="background:${r.color}18;color:${r.color};">${r.label}</span>`:''}).join('')}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;">
+        ${p.roles.map(rid=>{const r=roleDef(rid);
+          // FIX 4 : ne pas afficher les rôles cachés globaux sur la fiche
+          if(!r||r.is_hidden)return'';
+          return `<span class="role-pill" style="background:${r.color}18;color:${r.color};">${r.label}</span>`;
+        }).join('')}
+      </div>
     </div>`).join('');
 }
 function filterPlayers(f){currentFilter=f;renderProfiles();}
@@ -422,7 +423,8 @@ async function deletePlayer(id){if(!confirm('Supprimer ce joueur ?'))return;awai
 function editPlayerRoles(id){
   editingPlayerId=id;const p=players.find(pl=>pl.id===id);
   document.getElementById('edit-player-name').textContent=p.name;
-  document.getElementById('edit-roles-list').innerHTML=ROLES_DEF.map(r=>`<div class="role-pill" style="cursor:pointer;" data-rid="${r.id}" onclick="toggleEditRole(this,'${r.id}','${r.color}')">${r.label}</div>`).join('');
+  // FIX 4 : rôles cachés non modifiables ici (ils ne sont pas sur les fiches)
+  document.getElementById('edit-roles-list').innerHTML=ROLES_DEF.filter(r=>!r.is_hidden).map(r=>`<div class="role-pill" style="cursor:pointer;" data-rid="${r.id}" onclick="toggleEditRole(this,'${r.id}','${r.color}')">${r.label}</div>`).join('');
   document.querySelectorAll('#edit-roles-list [data-rid]').forEach(el=>{applyPillState(el,p.roles.includes(el.dataset.rid),roleDef(el.dataset.rid).color);});
   document.getElementById('modal-edit-player').classList.add('open');
 }
@@ -437,7 +439,8 @@ async function savePlayerRoles(){
 function closeEditModal(){document.getElementById('modal-edit-player').classList.remove('open');}
 function openAddPlayer(){
   newSelected=[];document.getElementById('new-name').value='';document.getElementById('new-discord-id').value='';
-  document.getElementById('new-roles').innerHTML=ROLES_DEF.map(r=>`<div class="role-pill" style="cursor:pointer;border:1px solid ${r.color}44;background:transparent;color:${r.color};" data-rid="${r.id}" onclick="toggleNewRole(this,'${r.id}','${r.color}')">${r.label}</div>`).join('');
+  // FIX 4 : pas les rôles cachés dans l'ajout de joueur
+  document.getElementById('new-roles').innerHTML=ROLES_DEF.filter(r=>!r.is_hidden).map(r=>`<div class="role-pill" style="cursor:pointer;border:1px solid ${r.color}44;background:transparent;color:${r.color};" data-rid="${r.id}" onclick="toggleNewRole(this,'${r.id}','${r.color}')">${r.label}</div>`).join('');
   document.getElementById('modal-player').classList.add('open');
 }
 function toggleNewRole(el,rid,color){
@@ -455,7 +458,7 @@ async function confirmAddPlayer(){
 }
 function closeAddModal(){document.getElementById('modal-player').classList.remove('open');}
 
-// ── EVENT ─────────────────────────────────────────────────
+// EVENT
 async function setMyPresence(st){
   if(!myDiscordId){openIdentityModal();return;}
   if(!currentEventId){alert('Aucun événement actif.');return;}
@@ -470,10 +473,9 @@ function getStatusStyle(st){
   return{border:'rgba(255,255,255,0.07)',bg:'var(--bg3)',color:'var(--text2)'};
 }
 function showPlayerRolesPopup(e,playerDiscordId,playerName,chipColor){
-  e.stopPropagation();
-  document.querySelectorAll('.player-roles-popup').forEach(el=>el.remove());
+  e.stopPropagation();document.querySelectorAll('.player-roles-popup').forEach(el=>el.remove());
   const p=players.find(pl=>pl.discord_id===playerDiscordId);if(!p)return;
-  const rolesHtml=p.roles.length?p.roles.map(rid=>{const r=roleDef(rid);return r?`<span class="role-pill" style="background:${r.color}18;color:${r.color};margin:2px 3px;">${r.label}</span>`:''}).join(''):'<span style="color:var(--text3);font-size:11px;">Aucun rôle défini</span>';
+  const rolesHtml=p.roles.length?p.roles.filter(rid=>!roleDef(rid)?.is_hidden).map(rid=>{const r=roleDef(rid);return r?`<span class="role-pill" style="background:${r.color}18;color:${r.color};margin:2px 3px;">${r.label}</span>`:''}).join(''):'<span style="color:var(--text3);font-size:11px;">Aucun rôle défini</span>';
   const popup=document.createElement('div');popup.className='player-roles-popup';
   popup.innerHTML=`<div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:${chipColor};margin-bottom:8px;">${playerName}</div><div style="display:flex;flex-wrap:wrap;">${rolesHtml}</div>`;
   document.body.appendChild(popup);
@@ -494,14 +496,12 @@ function renderPresence(){
     if(useStatusColor){const s=getStatusStyle(st);border=s.border;bg=s.bg;color=s.color;avatarColor=s.color;}
     else{const r=assignedRole;const cls=r&&r.cls?classDef(r.cls):null;const c=cls?cls.color:(r?r.color:'#8b92a8');border=c+'55';bg=c+'12';color=c;avatarColor=c;}
     const meStyle=isMe?'box-shadow:0 0 0 2px rgba(255,255,255,0.35);':'';
-    const avatarHtml=`<div style="width:18px;height:18px;border-radius:50%;background:${avatarColor}22;color:${avatarColor};display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:7px;flex-shrink:0;">${getInitials(p.name)}</div>`;
-    return `<div class="presence-chip" style="border-color:${border};background:${bg};color:${color};${meStyle}" onclick="showPlayerRolesPopup(event,'${p.discord_id}','${p.name}','${color}')">${avatarHtml}<span>${p.name}${isMe?' <span style="font-size:9px;opacity:.6;">(moi)</span>':''}</span><span class="chip-flag ${isFlagged?'on':''}" title="Marquer un doute" onclick="toggleFlag('${p.discord_id}',event)">⚑</span></div>`;
+    const avHtml=`<div style="width:18px;height:18px;border-radius:50%;background:${avatarColor}22;color:${avatarColor};display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:7px;flex-shrink:0;">${getInitials(p.name)}</div>`;
+    return `<div class="presence-chip" style="border-color:${border};background:${bg};color:${color};${meStyle}" onclick="showPlayerRolesPopup(event,'${p.discord_id}','${p.name}','${color}')">${avHtml}<span>${p.name}${isMe?' <span style="font-size:9px;opacity:.6;">(moi)</span>':''}</span><span class="chip-flag ${isFlagged?'on':''}" title="Marquer un doute" onclick="toggleFlag('${p.discord_id}',event)">⚑</span></div>`;
   };
   const freeHtml=free.map(p=>makeChip(p,true,null)).join('');
   let assignedHtml='';
-  if(assigned.length){
-    assignedHtml=`<div style="width:100%;height:1px;background:var(--border2);margin:8px 0 6px;position:relative;"><span style="position:absolute;left:50%;transform:translateX(-50%) translateY(-50%);background:var(--bg2);padding:0 8px;font-size:10px;color:var(--text3);white-space:nowrap;">en comp</span></div>`+assigned.map(p=>{const r=getAssignedRole(p.discord_id);return makeChip(p,false,r);}).join('');
-  }
+  if(assigned.length){assignedHtml=`<div style="width:100%;height:1px;background:var(--border2);margin:8px 0 6px;position:relative;"><span style="position:absolute;left:50%;transform:translateX(-50%) translateY(-50%);background:var(--bg2);padding:0 8px;font-size:10px;color:var(--text3);white-space:nowrap;">en comp</span></div>`+assigned.map(p=>{const r=getAssignedRole(p.discord_id);return makeChip(p,false,r);}).join('');}
   document.getElementById('presence-list').innerHTML=freeHtml+assignedHtml;
   const presentCount=Object.values(presence).filter(v=>v==='present').length;
   const pc=document.getElementById('present-count');if(pc)pc.textContent=presentCount+' présents'+(flagged.size?` (${flagged.size} ⚑)`:'');
@@ -512,10 +512,21 @@ async function toggleFlag(discordId,e){
   else{flagged.add(discordId);await sb.from('flagged').insert({event_id:currentEventId,discord_id:discordId});}
   renderPresence();
 }
+
+// FIX 1 : renderComp — masquer les rôles sans aucun joueur assigné
 function renderComp(){
   const zone=document.getElementById('comp-zone');if(!currentComp){zone.innerHTML='';return;}
   const groups={};
-  Object.entries(currentComp.slots||{}).forEach(([rid,slotDef])=>{const r=roleDef(rid);if(!r)return;const cls=r.cls||'other';if(!groups[cls])groups[cls]=[];groups[cls].push({rid,count:slotDef.count,strict:slotDef.strict});});
+  Object.entries(currentComp.slots||{}).forEach(([rid,slotDef])=>{
+    if(!slotDef||slotDef.count===0)return;
+    const r=roleDef(rid);if(!r)return;
+    // FIX 1 : on n'affiche ce rôle que si au moins 1 joueur y est assigné
+    const assigned=assignments[rid]||[];
+    if(assigned.length===0)return;
+    const cls=r.cls||'other';if(!groups[cls])groups[cls]=[];
+    groups[cls].push({rid,count:slotDef.count,strict:slotDef.strict});
+  });
+  if(Object.keys(groups).length===0){zone.innerHTML='<div style="color:var(--text3);padding:20px;font-size:13px;">Aucun joueur assigné pour l\'instant.</div>';return;}
   zone.innerHTML=CLASSES_DEF.filter(cls=>groups[cls.id]).map(cls=>{
     const roles=groups[cls.id].sort((a,b)=>ROLES_DEF.findIndex(r=>r.id===a.rid)-ROLES_DEF.findIndex(r=>r.id===b.rid));
     return `<div class="role-block"><div class="role-block-header"><span class="role-block-label" style="color:${cls.color}">${cls.label}</span></div>${roles.map(({rid,count})=>{
@@ -529,6 +540,7 @@ function renderComp(){
     }).join('')}</div>`;
   }).join('');
 }
+
 async function removeAssign(rid,idx){
   const playerId=assignments[rid]?.[idx]?.playerId;if(assignments[rid])assignments[rid].splice(idx,1);
   if(currentEventId&&playerId)await sb.from('assignments').delete().eq('event_id',currentEventId).eq('role_id',rid).eq('discord_id',playerId);
@@ -543,61 +555,58 @@ function renameTempRole(id,label){const t=tempRoles.find(r=>r.id===id);if(t)t.la
 function deleteTempRole(id){tempRoles=tempRoles.filter(r=>r.id!==id);delete tempAssignments[id];renderTempZone();renderPresence();}
 function removeTempAssign(id,idx){if(!tempAssignments[id])return;tempAssignments[id].splice(idx,1);if(!tempAssignments[id].length)delete tempAssignments[id];renderTempZone();renderPresence();}
 
-// ── FLOATING ASSIGN — FIX 4 ───────────────────────────────
-function openFloatingAssign(e,rid){pendingRoleId=rid;pendingPlayerId=null;pendingIsTemp=false;const r=roleDef(rid)||{label:rid,color:'#aaa',unique:false};_showFloating(e,rid,r,false);}
-function openTempAssign(tid){pendingTempId=tid;pendingPlayerId=null;pendingIsTemp=true;const tr=tempRoles.find(t=>t.id===tid)||{label:''};const fakeEvt={currentTarget:{getBoundingClientRect:()=>({right:window.innerWidth/2,top:window.innerHeight/3})}};_showFloating(fakeEvt,tid,{label:tr.label,color:'#8b92a8',unique:false},true);}
+// FLOATING ASSIGN — FIX 2 + FIX 3
+function openFloatingAssign(e,rid){pendingRoleId=rid;pendingPlayerId=null;pendingIsTemp=false;const r=roleDef(rid)||{label:rid,color:'#aaa'};_showFloating(e,rid,r,false);}
+function openTempAssign(tid){pendingTempId=tid;pendingPlayerId=null;pendingIsTemp=true;const tr=tempRoles.find(t=>t.id===tid)||{label:''};const fakeEvt={currentTarget:{getBoundingClientRect:()=>({right:window.innerWidth/2,top:window.innerHeight/3})}};_showFloating(fakeEvt,tid,{label:tr.label,color:'#8b92a8'},true);}
 
 function _showFloating(e,roleId,r,isTemp){
   const alreadyInRole=isTemp?(tempAssignments[roleId]||[]).map(a=>a.playerId):(assignments[roleId]||[]).map(a=>a.playerId);
-  // Ensemble des joueurs déjà assignés ailleurs
-  const usedElsewhere=new Set(
-    Object.entries(assignments)
-      .filter(([rid2])=>rid2!==roleId)
-      .flatMap(([,arr])=>arr.map(a=>a.playerId))
-  );
+  const usedElsewhere=new Set(Object.entries(assignments).filter(([rid2])=>rid2!==roleId).flatMap(([,arr])=>arr.map(a=>a.playerId)));
 
-  let candidates=isTemp?[...players]:players.filter(p=>p.roles.includes(roleId));
+  // FIX 4 : pour les rôles cachés globaux, tous les joueurs sont candidats
+  let candidates=isTemp?[...players]:(r.is_hidden?[...players]:players.filter(p=>p.roles.includes(roleId)));
 
-  // FIX 4 : tri en 3 groupes : disponibles présents → disponibles autres → déjà assignés ailleurs
-  const stOrder={present:0,maybe:1,none:2,absent:3};
+  // FIX 2 : on place myPlayer en tête s'il n'est pas déjà assigné dans ce rôle
   const getGroup=(p)=>{
-    if(alreadyInRole.includes(p.discord_id)) return 3; // déjà dans ce rôle (dimmed)
-    if(usedElsewhere.has(p.discord_id)) return 2;       // assigné ailleurs
-    return 0; // disponible
+    if(alreadyInRole.includes(p.discord_id))return 3;
+    if(p.discord_id===myDiscordId)return -1; // FIX 2 : toujours en premier
+    if(usedElsewhere.has(p.discord_id))return 2;
+    return 0;
   };
+  const stOrder={present:0,maybe:1,none:2,absent:3};
   candidates.sort((a,b)=>{
-    const ga=getGroup(a),gb=getGroup(b);
-    if(ga!==gb) return ga-gb;
-    // Au sein du même groupe : tri par statut de présence puis alpha
+    const ga=getGroup(a),gb=getGroup(b);if(ga!==gb)return ga-gb;
     const pa=stOrder[presence[a.discord_id]||'none'],pb=stOrder[presence[b.discord_id]||'none'];
-    if(pa!==pb) return pa-pb;
-    return a.name.localeCompare(b.name);
+    if(pa!==pb)return pa-pb;return a.name.localeCompare(b.name);
   });
 
-  const stIco=(did)=>{const s=presence[did]||'none';return s==='present'?'🟢':s==='maybe'?'🟡':s==='absent'?'🔴':'⚫';};
   const modal=document.getElementById('modal-assign');
-
   let html=`<div style="color:${r.color};font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:.05em;margin-bottom:8px;">${r.label}</div>`;
-  html+=`<input class="modal-search" id="fa-player-search" placeholder="🔍 Rechercher un joueur..." oninput="filterFloatingList(this.value,'${roleId}',${isTemp})" style="margin-bottom:8px;">`;
+  html+=`<input class="modal-search" id="fa-player-search" placeholder="🔍 Rechercher un joueur..." oninput="filterFloatingList(this.value)">`;
   html+=`<div id="fa-player-list" style="max-height:260px;overflow-y:auto;">`;
 
-  let lastGroup=-1;
+  let lastGroup=null;
   candidates.forEach(p=>{
     const g=getGroup(p);
     const isAlready=alreadyInRole.includes(p.discord_id);
     const isUsed=usedElsewhere.has(p.discord_id);
+    const isMe=p.discord_id===myDiscordId;
 
-    // Séparateur de groupe
     if(g!==lastGroup){
-      if(g===2) html+=`<div class="assign-group-label">Déjà assigné ailleurs</div>`;
+      if(g===-1) html+=`<div class="assign-group-label" style="color:#5865F2;">⭐ Moi</div>`;
+      else if(g===2) html+=`<div class="assign-group-label">Déjà assigné ailleurs</div>`;
       lastGroup=g;
     }
+
+    // FIX 3 : texte de statut lisible
+    const ps=presenceStatusText(p.discord_id);
     const usedInRole=Object.entries(assignments).find(([rid2,arr])=>rid2!==roleId&&arr.some(a=>a.playerId===p.discord_id));
-    const subtext=isUsed?`→ déjà en ${(roleDef(usedInRole?.[0])||{label:usedInRole?.[0]}).label}`:'disponible';
-    html+=`<div class="modal-player-opt ${isAlready?'dimmed':''} ${isUsed&&!isAlready?'used':''}" data-pid="${p.discord_id}" data-name="${p.name.toLowerCase()}">${avatarEl(p.name,p.color||'#5865F2',28)}<div style="flex:1;"><div style="font-weight:500;">${p.name}${flagged.has(p.discord_id)?'<span style="color:#f0c040;font-size:10px;margin-left:4px;">⚑</span>':''}</div><div style="font-size:11px;color:var(--text3);">${stIco(p.discord_id)} ${subtext}</div></div>${isAlready?'<span style="font-size:11px;color:var(--text3);">assigné</span>':''}</div>`;
+    const subtext=isUsed?`→ déjà en ${(roleDef(usedInRole?.[0])||{label:usedInRole?.[0]}).label}`:`<span style="color:${ps.color};">${ps.ico} ${ps.txt}</span>`;
+
+    const extraClass=isMe&&g===-1?'me-first':'';
+    html+=`<div class="modal-player-opt ${isAlready?'dimmed':''} ${isUsed&&!isAlready?'used':''} ${extraClass}" data-pid="${p.discord_id}" data-name="${p.name.toLowerCase()}">${avatarEl(p.name,p.color||'#5865F2',28)}<div style="flex:1;"><div style="font-weight:500;">${p.name}${isMe?' <span style="font-size:10px;color:#5865F2;">(moi)</span>':''}${flagged.has(p.discord_id)?'<span style="color:#f0c040;font-size:10px;margin-left:4px;">⚑</span>':''}</div><div style="font-size:11px;color:var(--text3);">${subtext}</div></div>${isAlready?'<span style="font-size:11px;color:var(--text3);">assigné</span>':''}</div>`;
   });
-  html+=`</div>`;
-  html+=`<input id="fa-weapon" class="weapon-input" placeholder="Arme (ex: Permafrost, Hache...)" style="margin-top:10px;display:none;">`;
+  html+=`</div><input id="fa-weapon" class="weapon-input" placeholder="Arme (ex: Permafrost, Hache...)" style="margin-top:10px;display:none;">`;
   html+=`<div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end;"><button class="btn btn-sm" onclick="closeFloating()">Fermer</button><button class="btn btn-primary btn-sm" onclick="confirmFloating()">Confirmer</button></div>`;
 
   modal.innerHTML=html;
@@ -614,21 +623,13 @@ function _showFloating(e,roleId,r,isTemp){
   const rect=e.currentTarget.getBoundingClientRect();
   modal.style.left=Math.min(rect.right+10,window.innerWidth-390)+'px';
   modal.style.top=Math.min(rect.top,window.innerHeight-480)+'px';
-  // Focus recherche
   setTimeout(()=>{const s=document.getElementById('fa-player-search');if(s)s.focus();},50);
 }
 
 function filterFloatingList(query){
   const q=query.toLowerCase().trim();
-  document.querySelectorAll('#fa-player-list .modal-player-opt').forEach(el=>{
-    el.style.display=(!q||el.dataset.name.includes(q))?'flex':'none';
-  });
-  // Masquer les labels de groupe si tous leurs éléments sont cachés
-  document.querySelectorAll('#fa-player-list .assign-group-label').forEach(lbl=>{
-    let next=lbl.nextElementSibling;let hasVisible=false;
-    while(next&&!next.classList.contains('assign-group-label')){if(next.style.display!=='none')hasVisible=true;next=next.nextElementSibling;}
-    lbl.style.display=hasVisible?'':'none';
-  });
+  document.querySelectorAll('#fa-player-list .modal-player-opt').forEach(el=>{el.style.display=(!q||el.dataset.name.includes(q))?'flex':'none';});
+  document.querySelectorAll('#fa-player-list .assign-group-label').forEach(lbl=>{let next=lbl.nextElementSibling;let has=false;while(next&&!next.classList.contains('assign-group-label')){if(next.style.display!=='none')has=true;next=next.nextElementSibling;}lbl.style.display=has?'':'none';});
 }
 
 async function confirmFloating(){
@@ -644,7 +645,7 @@ async function confirmFloating(){
 function closeFloating(){document.getElementById('modal-assign').style.display='none';}
 document.addEventListener('click',e=>{const m=document.getElementById('modal-assign');if(m.style.display!=='none'&&!m.contains(e.target)&&!e.target.closest('.empty-slot')&&!e.target.closest('.temp-role-block'))closeFloating();});
 
-// ── COMP EDITOR ───────────────────────────────────────────
+// COMP EDITOR
 function renderCompEditor(){
   document.getElementById('comp-tabs').innerHTML=comps.map((c,i)=>`<button class="btn btn-sm ${i===editCompIdx?'active':''}" onclick="selectComp(${i})">${c.name}</button>`).join('');
   document.getElementById('comp-name-input').value=editingComp?.name||'';
@@ -652,7 +653,7 @@ function renderCompEditor(){
   CLASSES_DEF.forEach(cls=>{const classRoles=ROLES_DEF.filter(r=>r.cls===cls.id);if(!classRoles.length)return;
     html+=`<div class="comp-class-card"><div class="comp-class-title" style="color:${cls.color}">${cls.label}</div><div class="comp-roles-grid">`;
     classRoles.forEach(r=>{const slotDef=(editingComp?.slots||{})[r.id]||{count:0,strict:false};const qty=slotDef.count||0;const strict=slotDef.strict||false;
-      html+=`<div class="comp-role-card"><div style="display:flex;width:100%;justify-content:space-between;align-items:center;"><span class="comp-role-label" style="color:${r.color}" title="${r.label}">${r.label}</span>${r.is_unique?'<span style="font-size:9px;color:var(--text3);">uniq</span>':''}</div><div style="display:flex;gap:12px;width:100%;align-items:center;"><div class="qty-pill"><button class="dec" onclick="changeQty('${r.id}',-1)">−</button><span class="qty-val" id="qty-${r.id}">${qty}</span><button class="inc" onclick="changeQty('${r.id}',1)">+</button></div><label class="max-toggle ${strict?'on':''}" title="Strict"><input type="checkbox" ${strict?'checked':''} onchange="toggleStrict('${r.id}',this.checked)" style="margin:0;">MAX</label></div></div>`;
+      html+=`<div class="comp-role-card"><div style="display:flex;width:100%;justify-content:space-between;align-items:center;"><span class="comp-role-label" style="color:${r.color}" title="${r.label}">${r.label}${r.is_hidden?'<span class="hidden-badge">caché</span>':''}</span>${r.is_unique?'<span style="font-size:9px;color:var(--text3);">uniq</span>':''}</div><div style="display:flex;gap:12px;width:100%;align-items:center;"><div class="qty-pill"><button class="dec" onclick="changeQty('${r.id}',-1)">−</button><span class="qty-val" id="qty-${r.id}">${qty}</span><button class="inc" onclick="changeQty('${r.id}',1)">+</button></div><label class="max-toggle ${strict?'on':''}" title="Strict"><input type="checkbox" ${strict?'checked':''} onchange="toggleStrict('${r.id}',this.checked)" style="margin:0;">MAX</label></div></div>`;
     });
     html+=`</div></div>`;
   });
@@ -674,17 +675,16 @@ async function deleteCurrentComp(){
   const compToDelete=comps[editCompIdx];
   const{data:linkedEvents}=await sb.from('events').select('id,title').eq('comp_id',compToDelete.id);
   let msg=`Supprimer la composition "${compToDelete.name}" ?`;
-  if(linkedEvents&&linkedEvents.length>0){msg=`⚠️ La composition "${compToDelete.name}" est utilisée par ${linkedEvents.length} événement(s) :\n`+linkedEvents.map(e=>`  • ${e.title}`).join('\n')+`\n\nCes événements et toutes leurs données seront également supprimés.\n\nConfirmer ?`;}
+  if(linkedEvents&&linkedEvents.length>0){msg=`⚠️ "${compToDelete.name}" est utilisée par ${linkedEvents.length} événement(s) :\n`+linkedEvents.map(e=>`  • ${e.title}`).join('\n')+`\n\nTous ces événements et leurs données seront supprimés.\n\nConfirmer ?`;}
   if(!confirm(msg))return;
   if(linkedEvents&&linkedEvents.length>0){const ids=linkedEvents.map(e=>e.id);for(const eid of ids){await sb.from('assignments').delete().eq('event_id',eid);await sb.from('presences').delete().eq('event_id',eid);await sb.from('flagged').delete().eq('event_id',eid);}await sb.from('events').delete().in('id',ids);}
-  const{error}=await sb.from('comps').delete().eq('id',compToDelete.id);
-  if(error){alert('Erreur : '+error.message);return;}
+  const{error}=await sb.from('comps').delete().eq('id',compToDelete.id);if(error){alert('Erreur : '+error.message);return;}
   comps.splice(editCompIdx,1);editCompIdx=Math.max(0,editCompIdx-1);editingComp=JSON.parse(JSON.stringify(comps[editCompIdx]));
   if(currentComp&&currentComp.id===compToDelete.id){currentComp=comps.length>0?JSON.parse(JSON.stringify(comps[0])):null;}
   renderCompEditor();
 }
 
-// ── CLASSES & ROLES ───────────────────────────────────────
+// CLASSES & ROLES — FIX 4 : toggle is_hidden
 let dragSrcIdx=null,dragSrcType=null;
 function initDrag(container,type){
   container.querySelectorAll('[data-drag-idx]').forEach(row=>{
@@ -710,14 +710,36 @@ function renderClassesEditor(){
   cl.innerHTML=CLASSES_DEF.map((c,i)=>`<div class="cls-row" draggable="true" data-drag-idx="${i}"><span style="color:var(--text3);font-size:12px;cursor:grab;margin-right:2px;">⠿</span><div style="width:10px;height:10px;border-radius:50%;background:${c.color};flex-shrink:0;"></div><span style="flex:1;font-weight:500;">${c.label}</span><input type="color" value="${c.color}" onchange="updateClassColor('${c.id}',this.value)"><button class="btn btn-danger btn-icon" onclick="deleteClass('${c.id}')">✕</button></div>`).join('');
   initDrag(cl,'class');
   const rl=document.getElementById('roles-list');
-  rl.innerHTML=ROLES_DEF.map((r,i)=>{const cls=classDef(r.cls)||{color:'#aaa',label:r.cls};return `<div class="role-row-editor" draggable="true" data-drag-idx="${i}"><span style="color:var(--text3);font-size:12px;cursor:grab;margin-right:2px;">⠿</span><div style="width:10px;height:10px;border-radius:50%;background:${r.color};flex-shrink:0;"></div><span style="flex:1;color:${r.color};font-weight:500;">${r.label}</span><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${cls.color}22;color:${cls.color};font-weight:500;">${cls.label}</span><button class="btn btn-danger btn-icon" onclick="deleteRole('${r.id}')">✕</button></div>`;}).join('');
+  rl.innerHTML=ROLES_DEF.map((r,i)=>{
+    const cls=classDef(r.cls)||{color:'#aaa',label:r.cls};
+    const isHidden=r.is_hidden||false;
+    return `<div class="role-row-editor" draggable="true" data-drag-idx="${i}">
+      <span style="color:var(--text3);font-size:12px;cursor:grab;margin-right:2px;">⠿</span>
+      <div style="width:10px;height:10px;border-radius:50%;background:${r.color};flex-shrink:0;"></div>
+      <span style="flex:1;color:${r.color};font-weight:500;">${r.label}${isHidden?'<span class="hidden-badge">caché global</span>':''}</span>
+      <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${cls.color}22;color:${cls.color};font-weight:500;">${cls.label}</span>
+      <label title="Rôle caché global : n'apparaît pas sur les fiches joueurs" style="display:flex;align-items:center;gap:3px;font-size:10px;color:${isHidden?'#b478f0':'var(--text3)'};cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" ${isHidden?'checked':''} onchange="toggleHiddenRole('${r.id}',this.checked)" style="accent-color:#b478f0;cursor:pointer;">Caché
+      </label>
+      <button class="btn btn-danger btn-icon" onclick="deleteRole('${r.id}')">✕</button>
+    </div>`;
+  }).join('');
   initDrag(rl,'role');
   document.getElementById('new-role-class').innerHTML=CLASSES_DEF.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
 }
+
+// FIX 4 : toggle is_hidden en DB
+async function toggleHiddenRole(id,val){
+  const r=ROLES_DEF.find(r=>r.id===id);if(!r)return;
+  r.is_hidden=val;
+  await sb.from('roles_def').update({is_hidden:val}).eq('id',id);
+  renderClassesEditor();
+}
+
 async function updateClassColor(id,color){const c=CLASSES_DEF.find(cc=>cc.id===id);if(c)c.color=color;ROLES_DEF.filter(r=>r.cls===id).forEach(r=>r.color=color);await sb.from('classes_def').update({color}).eq('id',id);await sb.from('roles_def').update({color}).eq('cls',id);renderClassesEditor();}
 async function addClass(){const name=document.getElementById('new-class-name').value.trim();const color=document.getElementById('new-class-color').value;if(!name)return;const id=name.toLowerCase().replace(/\s+/g,'-');if(CLASSES_DEF.find(c=>c.id===id)){alert('Classe déjà existante');return;}const sort_order=CLASSES_DEF.length;const{data}=await sb.from('classes_def').insert({id,label:name,color,sort_order}).select().single();CLASSES_DEF.push(data);document.getElementById('new-class-name').value='';renderClassesEditor();if(document.getElementById('view-comps').classList.contains('active'))renderCompEditor();}
 async function deleteClass(id){if(ROLES_DEF.some(r=>r.cls===id)){alert('Supprimez d\'abord les rôles de cette classe.');return;}await sb.from('classes_def').delete().eq('id',id);CLASSES_DEF=CLASSES_DEF.filter(c=>c.id!==id);renderClassesEditor();}
-async function addRole(){const name=document.getElementById('new-role-name').value.trim();const clsId=document.getElementById('new-role-class').value;if(!name||!clsId)return;const id=name.toLowerCase().replace(/\s+/g,'-');if(ROLES_DEF.find(r=>r.id===id)){alert('Rôle déjà existant');return;}const cls=classDef(clsId)||{color:'#aaa'};const sort_order=ROLES_DEF.length;const{data}=await sb.from('roles_def').insert({id,label:name,color:cls.color,cls:clsId,is_unique:false,sort_order}).select().single();ROLES_DEF.push(data);document.getElementById('new-role-name').value='';renderClassesEditor();if(document.getElementById('view-comps').classList.contains('active'))renderCompEditor();}
+async function addRole(){const name=document.getElementById('new-role-name').value.trim();const clsId=document.getElementById('new-role-class').value;if(!name||!clsId)return;const id=name.toLowerCase().replace(/\s+/g,'-');if(ROLES_DEF.find(r=>r.id===id)){alert('Rôle déjà existant');return;}const cls=classDef(clsId)||{color:'#aaa'};const sort_order=ROLES_DEF.length;const{data}=await sb.from('roles_def').insert({id,label:name,color:cls.color,cls:clsId,is_unique:false,is_hidden:false,sort_order}).select().single();ROLES_DEF.push(data);document.getElementById('new-role-name').value='';renderClassesEditor();if(document.getElementById('view-comps').classList.contains('active'))renderCompEditor();}
 async function deleteRole(id){await sb.from('roles_def').delete().eq('id',id);ROLES_DEF=ROLES_DEF.filter(r=>r.id!==id);renderClassesEditor();}
 
 init();
