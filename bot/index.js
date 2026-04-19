@@ -70,53 +70,80 @@ async function buildEventEmbed(eventId) {
 
   const assignedIds = new Set((asgData||[]).map(a => a.discord_id));
 
+  // FIX 3 : Présences — on n'affiche QUE ceux qui ont répondu (present ou maybe ou absent)
+  // On exclut les joueurs sans réponse (aucune entrée dans presData)
   const stIco = (id) => {
-    const s = presence[id]||'none';
-    return s==='present'?'🟢':s==='maybe'?'🟡':s==='absent'?'❌':'⚫';
+    const s = presence[id];
+    if(!s) return null; // pas de réponse → on skip
+    return s==='present'?'🟢':s==='maybe'?'🟡':'❌';
   };
 
   const sortByStatus = (a, b) => {
-    const o = { present:0, maybe:1, none:2, absent:3 };
-    return (o[presence[a.discord_id]||'none']) - (o[presence[b.discord_id]||'none']);
+    const o = { present:0, maybe:1, absent:2 };
+    const sa = presence[a.discord_id]||'z';
+    const sb2 = presence[b.discord_id]||'z';
+    return (o[sa]??9) - (o[sb2]??9) || a.name.localeCompare(b.name);
   };
 
-  const free = (players||[]).filter(p => !assignedIds.has(p.discord_id)).sort(sortByStatus);
-  const assigned = (players||[]).filter(p => assignedIds.has(p.discord_id)).sort(sortByStatus);
+  // Joueurs libres qui ont répondu
+  const free = (players||[])
+    .filter(p => !assignedIds.has(p.discord_id) && presence[p.discord_id])
+    .sort(sortByStatus);
 
-  const freeStr = free.length ? free.map(p => `${stIco(p.discord_id)}${p.name}`).join(' ') : '_aucun_';
-  const assignedStr = assigned.length ? assigned.map(p => `${stIco(p.discord_id)}${p.name}`).join(' ') : '';
-
-  let presenceLine = freeStr;
-  if(assignedStr) presenceLine += '\n────────────\n' + assignedStr;
+  // Joueurs en comp qui ont répondu
+  const assigned = (players||[])
+    .filter(p => assignedIds.has(p.discord_id) && presence[p.discord_id])
+    .sort(sortByStatus);
 
   const counts = { present:0, maybe:0, absent:0 };
   (presData||[]).forEach(p => { if(counts[p.status]!==undefined) counts[p.status]++; });
   const countStr = `🟢 ${counts.present}  🟡 ${counts.maybe}  ❌ ${counts.absent}`;
 
-  // ── COMPOSITION tableau compact ──
+  // Construction de la liste présences
+  let presenceStr = '';
+  if(free.length > 0) {
+    presenceStr += free.map(p => `${stIco(p.discord_id)} ${p.name}`).join('  ');
+  }
+  if(assigned.length > 0) {
+    if(presenceStr) presenceStr += '\n── en comp ──\n';
+    presenceStr += assigned.map(p => `${stIco(p.discord_id)} ${p.name}`).join('  ');
+  }
+  if(!presenceStr) presenceStr = '_Aucune réponse pour l\'instant_';
+
+  // FIX 1 + FIX 2 : Composition — affiche TOUS les slots (même vides), avec gomette de couleur de classe
   let compStr = '';
 
-  if(event.comp_id){
+  if(event.comp_id) {
     const { data: comp } = await supabase.from('comps').select('*').eq('id', event.comp_id).single();
-    if(comp && comp.slots){
+    if(comp && comp.slots) {
       const slots = comp.slots;
+
       (classes||[]).forEach(cls => {
         const clsRoles = (roles||[]).filter(r => r.cls === cls.id && slots[r.id] && slots[r.id].count > 0);
         if(!clsRoles.length) return;
+
+        // FIX 2 : Gomette de couleur Discord pour la classe
+        // Discord ne supporte pas les vraies couleurs inline, on utilise des emojis de couleur
+        const clsEmoji = classColorEmoji(cls.color);
+
         clsRoles.forEach(r => {
+          const slotDef = slots[r.id];
+          const count = slotDef.count || 0;
           const asgn = assignments[r.id] || [];
-          if(asgn.length === 0) return;
-          const label = r.label.padEnd(14);
-          asgn.forEach((a, i) => {
-            const p = (players||[]).find(pl => pl.discord_id === a.discordId);
-            const name = p ? p.name : '?';
-            const weapon = a.weapon ? `- ${a.weapon}` : '';
-            if(i === 0){
-              compStr += `\`${label}\` ${name.padEnd(12)} ${weapon}\n`;
+          const roleLabel = r.label.padEnd(13);
+
+          for(let i = 0; i < count; i++) {
+            const a = asgn[i];
+            if(a) {
+              const p = (players||[]).find(pl => pl.discord_id === a.discordId);
+              const name = p ? p.name : '?';
+              const weapon = a.weapon ? ` — ${a.weapon}` : '';
+              compStr += `${clsEmoji} \`${roleLabel}\` ${name}${weapon}\n`;
             } else {
-              compStr += `\`${' '.repeat(14)}\` ${name.padEnd(12)} ${weapon}\n`;
+              // FIX 1 : slot vide → affiche quand même avec un tiret
+              compStr += `${clsEmoji} \`${roleLabel}\` _— libre —_\n`;
             }
-          });
+          }
         });
       });
     }
@@ -128,7 +155,7 @@ async function buildEventEmbed(eventId) {
     .setTitle(`⚔️ ${event.title}`)
     .setColor(0x5865F2)
     .addFields(
-      { name: `Présences — ${countStr}`, value: presenceLine.slice(0, 1024), inline: false },
+      { name: `Présences — ${countStr}`, value: presenceStr.slice(0, 1024), inline: false },
       { name: 'Composition', value: compStr.slice(0, 1024) || '—', inline: false }
     );
 
@@ -136,6 +163,48 @@ async function buildEventEmbed(eventId) {
   embed.setFooter({ text: `Event ID: ${eventId}` });
 
   return embed;
+}
+
+/**
+ * FIX 2 : Convertit une couleur hex en emoji de couleur Discord approximatif.
+ * Discord n'ayant pas de texte coloré inline dans les embeds,
+ * on mappe les couleurs à des emojis carrés standards.
+ */
+function classColorEmoji(hex) {
+  if(!hex) return '⬜';
+  const h = hex.replace('#','').toLowerCase();
+  // Parse RGB
+  const r = parseInt(h.substring(0,2),16);
+  const g = parseInt(h.substring(2,4),16);
+  const b = parseInt(h.substring(4,6),16);
+
+  // Mapping vers les emojis carrés disponibles sur Discord
+  // On cherche la teinte dominante
+  const max = Math.max(r,g,b);
+  const min = Math.min(r,g,b);
+  const lightness = (max+min)/2/255;
+
+  if(lightness < 0.15) return '⬛'; // très sombre → noir
+  if(lightness > 0.85) return '⬜'; // très clair → blanc
+
+  // Teinte
+  if(max === min) return '🟫'; // gris
+
+  let hue = 0;
+  if(max===r) hue = 60*((g-b)/(max-min));
+  else if(max===g) hue = 60*(2+(b-r)/(max-min));
+  else hue = 60*(4+(r-g)/(max-min));
+  if(hue<0) hue+=360;
+
+  if(hue<25)  return '🔴';
+  if(hue<45)  return '🟠';
+  if(hue<70)  return '🟡';
+  if(hue<150) return '🟢';
+  if(hue<200) return '🔵'; // cyan → bleu
+  if(hue<260) return '🔵';
+  if(hue<290) return '🟣';
+  if(hue<330) return '🟣'; // rose → violet
+  return '🔴';
 }
 
 async function updateEventMessage(eventId) {
@@ -170,6 +239,14 @@ client.once('ready', async () => {
     })
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'assignments' }, async (payload) => {
       const eventId = payload.old?.event_id;
+      if(eventId) await updateEventMessage(eventId);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'presences' }, async (payload) => {
+      const eventId = payload.new?.event_id;
+      if(eventId) await updateEventMessage(eventId);
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'presences' }, async (payload) => {
+      const eventId = payload.new?.event_id;
       if(eventId) await updateEventMessage(eventId);
     })
     .subscribe();
