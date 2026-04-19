@@ -69,6 +69,7 @@ async function buildEventEmbed(eventId) {
   });
 
   const assignedIds = new Set((asgData||[]).map(a => a.discord_id));
+  const hasStatus = new Set(Object.keys(presence));
 
   const stIco = (id) => {
     const s = presence[id]||'none';
@@ -80,8 +81,9 @@ async function buildEventEmbed(eventId) {
     return (o[presence[a.discord_id]||'none']) - (o[presence[b.discord_id]||'none']);
   };
 
-  const free = (players||[]).filter(p => !assignedIds.has(p.discord_id)).sort(sortByStatus);
-  const assigned = (players||[]).filter(p => assignedIds.has(p.discord_id)).sort(sortByStatus);
+  // 1) Seulement les joueurs qui ont cliqué sur un statut
+  const free = (players||[]).filter(p => !assignedIds.has(p.discord_id) && hasStatus.has(p.discord_id)).sort(sortByStatus);
+  const assigned = (players||[]).filter(p => assignedIds.has(p.discord_id) && hasStatus.has(p.discord_id)).sort(sortByStatus);
 
   const freeStr = free.length ? free.map(p => `${stIco(p.discord_id)}${p.name}`).join(' ') : '_aucun_';
   const assignedStr = assigned.length ? assigned.map(p => `${stIco(p.discord_id)}${p.name}`).join(' ') : '';
@@ -93,9 +95,8 @@ async function buildEventEmbed(eventId) {
   (presData||[]).forEach(p => { if(counts[p.status]!==undefined) counts[p.status]++; });
   const countStr = `🟢 ${counts.present}  🟡 ${counts.maybe}  ❌ ${counts.absent}`;
 
-  // ── COMPOSITION tableau compact ──
+  // 2) Tous les rôles visibles (même vides) + 3) en-tête classe par groupe
   let compStr = '';
-
   if(event.comp_id){
     const { data: comp } = await supabase.from('comps').select('*').eq('id', event.comp_id).single();
     if(comp && comp.slots){
@@ -103,20 +104,28 @@ async function buildEventEmbed(eventId) {
       (classes||[]).forEach(cls => {
         const clsRoles = (roles||[]).filter(r => r.cls === cls.id && slots[r.id] && slots[r.id].count > 0);
         if(!clsRoles.length) return;
+
+        compStr += `\n**${cls.label}**:\n`;  // gommette = en-tête classe
+
         clsRoles.forEach(r => {
           const asgn = assignments[r.id] || [];
-          if(asgn.length === 0) return;
           const label = r.label.padEnd(14);
-          asgn.forEach((a, i) => {
-            const p = (players||[]).find(pl => pl.discord_id === a.discordId);
-            const name = p ? p.name : '?';
-            const weapon = a.weapon ? `- ${a.weapon}` : '';
-            if(i === 0){
-              compStr += `\`${label}\` ${name.padEnd(12)} ${weapon}\n`;
-            } else {
-              compStr += `\`${' '.repeat(14)}\` ${name.padEnd(12)} ${weapon}\n`;
-            }
-          });
+          const max = slots[r.id].count;
+
+          if(asgn.length === 0){
+            compStr += `\`${label}\` — (vide)\n`;
+          } else {
+            asgn.forEach((a, i) => {
+              const p = (players||[]).find(pl => pl.discord_id === a.discordId);
+              const name = p ? p.name : '?';
+              const weapon = a.weapon ? `- ${a.weapon}` : '';
+              if(i === 0){
+                compStr += `\`${label}\` ${name.padEnd(12)} ${weapon}\n`;
+              } else {
+                compStr += `\`${' '.repeat(14)}\` ${name.padEnd(12)} ${weapon}\n`;
+              }
+            });
+          }
         });
       });
     }
