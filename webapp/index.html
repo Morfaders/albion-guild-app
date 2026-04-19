@@ -112,16 +112,18 @@ input[type=color]{width:38px;height:28px;border:1px solid var(--border2);border-
 ::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
 .loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;letter-spacing:.05em;color:var(--text2);}
 .loading.hidden{display:none;}
-/* Popup rôles joueur */
 .player-roles-popup{position:fixed;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:12px;z-index:2000;box-shadow:0 8px 32px rgba(0,0,0,.6);min-width:180px;max-width:280px;}
+/* Badge comp actif dans la vue event */
+.comp-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;font-size:12px;color:var(--text2);}
+.comp-badge-name{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;color:var(--text);letter-spacing:.04em;}
+
 body.render-mode .sidebar,
 body.render-mode .channel-header,
-body.render-mode #comp-select,
 body.render-mode [onclick="addTempRole()"],
 body.render-mode .btn-danger,
 body.render-mode .empty-slot,
 body.render-mode .chip-flag,
-body.render-mode #event-banner .btn { display:none !important; }
+body.render-mode #event-comp-info .btn { display:none !important; }
 body.render-mode .app { height:auto; }
 body.render-mode .main { overflow:visible; }
 body.render-mode .content { max-width:100%; }
@@ -150,6 +152,8 @@ body.render-mode .content { max-width:100%; }
       <span class="channel-name" id="ch-name">profils-joueurs</span>
     </div>
     <div class="content">
+
+      <!-- ═══ PROFILES ═══ -->
       <div class="view active" id="view-profiles">
         <div class="section-head">
           <div class="section-title">Profils joueurs</div>
@@ -158,6 +162,8 @@ body.render-mode .content { max-width:100%; }
         <div class="filter-row" id="filter-row"></div>
         <div class="player-grid" id="player-grid"></div>
       </div>
+
+      <!-- ═══ EVENT ═══ -->
       <div class="view" id="view-event">
         <div id="event-banner" style="background:linear-gradient(135deg,#1a1f30,#1e2738);border:1px solid var(--border2);border-radius:var(--r2);padding:20px;margin-bottom:16px;">
           <div style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;" id="event-title">⚔️ Événement</div>
@@ -175,13 +181,16 @@ body.render-mode .content { max-width:100%; }
         <div class="section-head" style="margin-top:4px;">
           <div class="section-title">Composition</div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <select id="comp-select" class="btn btn-sm" onchange="loadTemplate(this.value)" style="background:var(--bg3);color:var(--text);"></select>
+            <!-- FIX: affiche juste le nom de la comp liée, pas de select modifiable -->
+            <div id="event-comp-info"></div>
             <button class="btn btn-sm" onclick="addTempRole()">+ Rôle temp.</button>
           </div>
         </div>
         <div id="comp-zone" class="comp-zone"></div>
         <div id="temp-zone"></div>
       </div>
+
+      <!-- ═══ COMP EDITOR ═══ -->
       <div class="view" id="view-comps">
         <div class="section-head">
           <div class="section-title">Éditeur de composition</div>
@@ -195,6 +204,8 @@ body.render-mode .content { max-width:100%; }
         <input id="comp-name-input" class="weapon-input" placeholder="Nom de la composition" style="max-width:300px;margin-bottom:14px;">
         <div id="comp-editor"></div>
       </div>
+
+      <!-- ═══ CLASSES & ROLES ═══ -->
       <div class="view" id="view-classes">
         <div class="section-head">
           <div class="section-title">Classes & Rôles</div>
@@ -221,10 +232,13 @@ body.render-mode .content { max-width:100%; }
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </div>
+
 <div id="modal-assign"></div>
+
 <div id="modal-player" class="modal">
   <div class="modal-box">
     <div class="modal-title">Nouveau joueur</div>
@@ -238,6 +252,7 @@ body.render-mode .content { max-width:100%; }
     </div>
   </div>
 </div>
+
 <div id="modal-edit-player" class="modal">
   <div class="modal-box">
     <div class="modal-title">Modifier — <span id="edit-player-name"></span></div>
@@ -275,7 +290,6 @@ async function init(){
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('app').style.display = 'flex';
   renderProfiles();
-  updateCompSelect();
   if(currentEventId) showView('event');
 
   if(currentEventId){
@@ -311,8 +325,32 @@ async function loadEventData(eventId){
   if(event){
     document.getElementById('event-title').textContent='⚔️ '+event.title;
     document.getElementById('event-subtitle').innerHTML=(event.event_date||'')+' — <span id="present-count">0 présents</span>';
-    if(event.comp_id){ const comp=comps.find(c=>c.id===event.comp_id); if(comp) currentComp=JSON.parse(JSON.stringify(comp)); }
+    // FIX: on charge la comp liée à l'event, pas de select libre
+    if(event.comp_id){
+      const comp=comps.find(c=>c.id===event.comp_id);
+      if(comp) currentComp=JSON.parse(JSON.stringify(comp));
+    }
+    // Affiche le badge du nom de la comp (non modifiable depuis l'event)
+    renderEventCompBadge(event.comp_id);
   }
+}
+
+// ============================================================
+// FIX: badge comp dans la vue event (lecture seule)
+// ============================================================
+function renderEventCompBadge(compId){
+  const el = document.getElementById('event-comp-info');
+  if(!el) return;
+  if(!compId){
+    el.innerHTML = '<span style="font-size:12px;color:var(--text3);">Aucune comp liée</span>';
+    return;
+  }
+  const comp = comps.find(c=>c.id===compId);
+  if(!comp){
+    el.innerHTML = '<span style="font-size:12px;color:var(--text3);">Comp introuvable</span>';
+    return;
+  }
+  el.innerHTML = `<div class="comp-badge">🗂 Comp : <span class="comp-badge-name">${comp.name}</span></div>`;
 }
 
 // ============================================================
@@ -415,7 +453,7 @@ function closeAddModal(){ document.getElementById('modal-player').classList.remo
 // VIEW: EVENT
 // ============================================================
 async function setMyPresence(st){ alert('Présence via Discord uniquement pour l\'instant.'); }
-function renderEvent(){ renderPresence(); renderComp(); renderTempZone(); updateCompSelect(); }
+function renderEvent(){ renderPresence(); renderComp(); renderTempZone(); }
 
 function getStatusStyle(st){
   if(st==='present') return {border:'rgba(61,220,132,.4)',bg:'rgba(61,220,132,.08)',color:'#3ddc84'};
@@ -424,7 +462,6 @@ function getStatusStyle(st){
   return {border:'rgba(255,255,255,0.07)',bg:'var(--bg3)',color:'var(--text2)'};
 }
 
-// ── POPUP RÔLES ──
 function showPlayerRolesPopup(e, playerDiscordId, playerName, chipColor){
   e.stopPropagation();
   document.querySelectorAll('.player-roles-popup').forEach(el=>el.remove());
@@ -519,8 +556,6 @@ async function removeAssign(rid,idx){
   if(currentEventId&&playerId) await sb.from('assignments').delete().eq('event_id',currentEventId).eq('role_id',rid).eq('discord_id',playerId);
   renderComp(); renderPresence();
 }
-function loadTemplate(id){ const c=comps.find(x=>x.id===parseInt(id)); if(c){ currentComp=JSON.parse(JSON.stringify(c)); assignments={}; renderComp(); } }
-function updateCompSelect(){ const sel=document.getElementById('comp-select'); if(!sel) return; sel.innerHTML='<option value="">-- Template --</option>'+comps.map(c=>`<option value="${c.id}">${c.name}</option>`).join(''); }
 
 function addTempRole(){ tempRoles.push({id:'temp-'+Date.now(),label:'Rôle temporaire'}); renderTempZone(); }
 function renderTempZone(){
@@ -594,13 +629,34 @@ async function saveComp(){
   editingComp.name=document.getElementById('comp-name-input').value||'Comp sans nom';
   const {data,error}=await sb.from('comps').upsert({id:editingComp.id||undefined,name:editingComp.name,slots:editingComp.slots||{}}).select().single();
   if(error){alert('Erreur: '+error.message);return;}
-  comps[editCompIdx]=data; editingComp=JSON.parse(JSON.stringify(data)); updateCompSelect(); renderCompEditor();
+  comps[editCompIdx]=data; editingComp=JSON.parse(JSON.stringify(data)); renderCompEditor();
   const btn=document.querySelector('[onclick="saveComp()"]'); if(btn){const o=btn.textContent;btn.textContent='✓ Sauvegardé';setTimeout(()=>btn.textContent=o,1500);}
 }
-async function newComp(){ const {data}=await sb.from('comps').insert({name:'Nouvelle comp',slots:{}}).select().single(); comps.push(data); editCompIdx=comps.length-1; editingComp=JSON.parse(JSON.stringify(data)); updateCompSelect(); renderCompEditor(); }
+async function newComp(){ const {data}=await sb.from('comps').insert({name:'Nouvelle comp',slots:{}}).select().single(); comps.push(data); editCompIdx=comps.length-1; editingComp=JSON.parse(JSON.stringify(data)); renderCompEditor(); }
+
+// ============================================================
+// FIX BUG 1 : Suppression réelle et persistée de la composition
+// ============================================================
 async function deleteCurrentComp(){
-  if(comps.length<=1){alert('Au moins une comp est requise.');return;} if(!confirm('Supprimer ?')) return;
-  await sb.from('comps').delete().eq('id',comps[editCompIdx].id); comps.splice(editCompIdx,1); editCompIdx=0; editingComp=JSON.parse(JSON.stringify(comps[0])); updateCompSelect(); renderCompEditor();
+  if(comps.length<=1){ alert('Au moins une composition est requise.'); return; }
+  const compToDelete = comps[editCompIdx];
+  if(!confirm(`Supprimer la composition "${compToDelete.name}" ?`)) return;
+
+  // Suppression en base avec vérification de l'erreur
+  const { error } = await sb.from('comps').delete().eq('id', compToDelete.id);
+  if(error){ alert('Erreur lors de la suppression : ' + error.message); return; }
+
+  // Mise à jour du state local APRÈS confirmation Supabase
+  comps.splice(editCompIdx, 1);
+  editCompIdx = Math.max(0, editCompIdx - 1);
+  editingComp = JSON.parse(JSON.stringify(comps[editCompIdx]));
+
+  // Si la comp supprimée était la comp active de l'event, on réinitialise
+  if(currentComp && currentComp.id === compToDelete.id){
+    currentComp = comps.length > 0 ? JSON.parse(JSON.stringify(comps[0])) : null;
+  }
+
+  renderCompEditor();
 }
 
 // ============================================================
