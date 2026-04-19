@@ -141,7 +141,7 @@ async function buildEventEmbed(eventId) {
               compStr += `${clsEmoji} \`${roleLabel}\` ${name}${weapon}\n`;
             } else {
               // FIX 1 : slot vide → affiche quand même avec un tiret
-              compStr += `${clsEmoji} \`${roleLabel}\` -_______\n`;
+              compStr += `${clsEmoji} \`${roleLabel}\` —________\n`;
             }
           }
         });
