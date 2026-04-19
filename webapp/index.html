@@ -27,7 +27,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .nav-item.active{background:var(--bg4);color:var(--text);}
 .nav-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 .sidebar-bottom{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;}
-.user-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;cursor:pointer;transition:opacity .12s;}
+.user-avatar:hover{opacity:.8;}
 .main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
 .channel-header{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
 .channel-name{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;letter-spacing:.04em;}
@@ -113,17 +114,20 @@ input[type=color]{width:38px;height:28px;border:1px solid var(--border2);border-
 .loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;letter-spacing:.05em;color:var(--text2);}
 .loading.hidden{display:none;}
 .player-roles-popup{position:fixed;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:12px;z-index:2000;box-shadow:0 8px 32px rgba(0,0,0,.6);min-width:180px;max-width:280px;}
-/* Badge comp actif dans la vue event */
 .comp-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;font-size:12px;color:var(--text2);}
 .comp-badge-name{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;color:var(--text);letter-spacing:.04em;}
+/* Bandeau identité */
+.identity-banner{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--r2);margin-bottom:12px;font-size:12px;}
+.identity-banner.linked{background:rgba(61,220,132,.06);border:1px solid rgba(61,220,132,.3);color:#3ddc84;}
+.identity-banner.unlinked{background:rgba(240,192,64,.06);border:1px solid rgba(240,192,64,.3);color:#f0c040;cursor:pointer;}
+.identity-banner.unlinked:hover{background:rgba(240,192,64,.12);}
 
 body.render-mode .sidebar,
 body.render-mode .channel-header,
 body.render-mode [onclick="addTempRole()"],
 body.render-mode .btn-danger,
 body.render-mode .empty-slot,
-body.render-mode .chip-flag,
-body.render-mode #event-comp-info .btn { display:none !important; }
+body.render-mode .chip-flag { display:none !important; }
 body.render-mode .app { height:auto; }
 body.render-mode .main { overflow:visible; }
 body.render-mode .content { max-width:100%; }
@@ -142,8 +146,11 @@ body.render-mode .content { max-width:100%; }
     <div class="nav-item" onclick="showView('comps')" id="nav-comps"><div class="nav-dot" style="background:#f0c040"></div>Éditeur comp</div>
     <div class="nav-item" onclick="showView('classes')" id="nav-classes"><div class="nav-dot" style="background:#b478f0"></div>Classes & Rôles</div>
     <div class="sidebar-bottom">
-      <div class="user-avatar">AG</div>
-      <div><div style="font-size:13px;font-weight:500">Albion Guild</div><div style="font-size:11px;color:var(--text3)">🟢 En ligne</div></div>
+      <div class="user-avatar" id="sidebar-avatar" onclick="openIdentityModal()" title="Définir mon identité">?</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="sidebar-name">Non identifié</div>
+        <div style="font-size:11px;color:var(--text3);" id="sidebar-status">Cliquez pour vous identifier</div>
+      </div>
     </div>
   </div>
   <div class="main">
@@ -153,7 +160,7 @@ body.render-mode .content { max-width:100%; }
     </div>
     <div class="content">
 
-      <!-- ═══ PROFILES ═══ -->
+      <!-- PROFILES -->
       <div class="view active" id="view-profiles">
         <div class="section-head">
           <div class="section-title">Profils joueurs</div>
@@ -163,8 +170,9 @@ body.render-mode .content { max-width:100%; }
         <div class="player-grid" id="player-grid"></div>
       </div>
 
-      <!-- ═══ EVENT ═══ -->
+      <!-- EVENT -->
       <div class="view" id="view-event">
+        <div id="identity-banner-el"></div>
         <div id="event-banner" style="background:linear-gradient(135deg,#1a1f30,#1e2738);border:1px solid var(--border2);border-radius:var(--r2);padding:20px;margin-bottom:16px;">
           <div style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;" id="event-title">⚔️ Événement</div>
           <div style="font-size:13px;color:var(--text2);margin-top:4px;" id="event-subtitle"><span id="present-count">0 présents</span></div>
@@ -181,7 +189,6 @@ body.render-mode .content { max-width:100%; }
         <div class="section-head" style="margin-top:4px;">
           <div class="section-title">Composition</div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <!-- FIX: affiche juste le nom de la comp liée, pas de select modifiable -->
             <div id="event-comp-info"></div>
             <button class="btn btn-sm" onclick="addTempRole()">+ Rôle temp.</button>
           </div>
@@ -190,7 +197,7 @@ body.render-mode .content { max-width:100%; }
         <div id="temp-zone"></div>
       </div>
 
-      <!-- ═══ COMP EDITOR ═══ -->
+      <!-- COMP EDITOR -->
       <div class="view" id="view-comps">
         <div class="section-head">
           <div class="section-title">Éditeur de composition</div>
@@ -205,11 +212,11 @@ body.render-mode .content { max-width:100%; }
         <div id="comp-editor"></div>
       </div>
 
-      <!-- ═══ CLASSES & ROLES ═══ -->
+      <!-- CLASSES & ROLES -->
       <div class="view" id="view-classes">
         <div class="section-head">
           <div class="section-title">Classes & Rôles</div>
-          <button class="btn btn-primary btn-sm" onclick="saveClassesRoles()">💾 Sauvegarder</button>
+          <span style="font-size:11px;color:var(--text3);">Glissez pour réordonner — sauvegarde automatique</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
           <div>
@@ -239,6 +246,20 @@ body.render-mode .content { max-width:100%; }
 
 <div id="modal-assign"></div>
 
+<!-- Modal identité -->
+<div id="modal-identity" class="modal">
+  <div class="modal-box">
+    <div class="modal-title">🎮 Mon identité</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Sélectionnez votre profil pour pouvoir indiquer vos présences depuis la web app.</div>
+    <div id="identity-player-list" style="max-height:360px;overflow-y:auto;margin-bottom:12px;"></div>
+    <div style="display:flex;gap:8px;justify-content:space-between;">
+      <button class="btn btn-danger btn-sm" onclick="clearIdentity()">Se déconnecter</button>
+      <button class="btn btn-sm" onclick="closeIdentityModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal ajout joueur -->
 <div id="modal-player" class="modal">
   <div class="modal-box">
     <div class="modal-title">Nouveau joueur</div>
@@ -253,6 +274,7 @@ body.render-mode .content { max-width:100%; }
   </div>
 </div>
 
+<!-- Modal edit joueur -->
 <div id="modal-edit-player" class="modal">
   <div class="modal-box">
     <div class="modal-title">Modifier — <span id="edit-player-name"></span></div>
@@ -269,33 +291,121 @@ const SUPABASE_URL = 'https://pykfayupgehzxpeqzdin.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_JHGXYJx7Obu6-oW3Z9CGjQ_wx2FeTTW';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let CLASSES_DEF = [], ROLES_DEF = [], players = [], presence = {}, flagged = new Set();
-let assignments = {}, tempRoles = [], tempAssignments = {}, comps = [];
-let currentComp = null, editingComp = null, editCompIdx = 0, editingPlayerId = null;
-let newSelected = [], currentFilter = 'alpha';
-let pendingRoleId = null, pendingPlayerId = null, pendingIsTemp = false, pendingTempId = null;
-let currentEventId = null;
+let CLASSES_DEF=[], ROLES_DEF=[], players=[], presence={}, flagged=new Set();
+let assignments={}, tempRoles=[], tempAssignments={}, comps=[];
+let currentComp=null, editingComp=null, editCompIdx=0, editingPlayerId=null;
+let newSelected=[], currentFilter='alpha';
+let pendingRoleId=null, pendingPlayerId=null, pendingIsTemp=false, pendingTempId=null;
+let currentEventId=null;
 
-// ============================================================
+// ─────────────────────────────────────────────
+// IDENTITÉ JOUEUR (localStorage + URL param)
+// ─────────────────────────────────────────────
+let myDiscordId = localStorage.getItem('myDiscordId')||null;
+let myPlayer = null;
+
+function resolveMyPlayer(){
+  // Pré-remplissage depuis l'URL Discord (?discord_id=XXX)
+  const params=new URLSearchParams(window.location.search);
+  const urlId=params.get('discord_id');
+  if(urlId){ myDiscordId=urlId; localStorage.setItem('myDiscordId',urlId); }
+  myPlayer=myDiscordId?players.find(p=>p.discord_id===myDiscordId):null;
+  renderSidebarIdentity();
+}
+
+function renderSidebarIdentity(){
+  const av=document.getElementById('sidebar-avatar');
+  const nm=document.getElementById('sidebar-name');
+  const st=document.getElementById('sidebar-status');
+  if(myPlayer){
+    av.textContent=getInitials(myPlayer.name);
+    av.style.background=myPlayer.color||'var(--accent)';
+    nm.textContent=myPlayer.name;
+    st.textContent='🟢 Identifié';
+    st.style.color='#3ddc84';
+  } else {
+    av.textContent='?';
+    av.style.background='var(--accent)';
+    nm.textContent='Non identifié';
+    st.textContent='Cliquez pour vous identifier';
+    st.style.color='var(--text3)';
+  }
+}
+
+function renderIdentityBanner(){
+  const el=document.getElementById('identity-banner-el');
+  if(!el) return;
+  if(myPlayer){
+    const st=presence[myPlayer.discord_id]||'none';
+    const stTxt=st==='present'?'🟢 Présent':st==='maybe'?'🟡 Peut-être':st==='absent'?'❌ Absent':'⚫ Non renseigné';
+    el.innerHTML=`<div class="identity-banner linked">
+      ${avatarEl(myPlayer.name,myPlayer.color||'#5865F2',22)}
+      <span style="color:var(--text);font-weight:500;">${myPlayer.name}</span>
+      <span style="margin-left:4px;font-size:11px;">${stTxt}</span>
+      <span style="margin-left:auto;font-size:11px;opacity:.5;cursor:pointer;" onclick="openIdentityModal()">Changer</span>
+    </div>`;
+  } else {
+    el.innerHTML=`<div class="identity-banner unlinked" onclick="openIdentityModal()">
+      <span>⚠️</span>
+      <span>Vous n'êtes pas identifié — <u>cliquez ici</u> pour indiquer vos présences.</span>
+    </div>`;
+  }
+}
+
+function openIdentityModal(){
+  const list=document.getElementById('identity-player-list');
+  list.innerHTML=players.map(p=>`
+    <div class="modal-player-opt ${myDiscordId===p.discord_id?'selected':''}" onclick="selectIdentity('${p.discord_id}')">
+      ${avatarEl(p.name,p.color||'#5865F2',28)}
+      <div style="flex:1;">
+        <div style="font-weight:500;">${p.name}</div>
+        <div style="font-size:11px;color:var(--text3);">${p.discord_id?'🔗 '+p.discord_id:'pas de discord ID'}</div>
+      </div>
+      ${myDiscordId===p.discord_id?'<span style="font-size:11px;color:#3ddc84;font-weight:600;">✓ Moi</span>':''}
+    </div>`).join('');
+  document.getElementById('modal-identity').classList.add('open');
+}
+
+function selectIdentity(discordId){
+  myDiscordId=discordId;
+  localStorage.setItem('myDiscordId',discordId);
+  myPlayer=players.find(p=>p.discord_id===discordId)||null;
+  closeIdentityModal();
+  renderSidebarIdentity();
+  renderIdentityBanner();
+}
+
+function clearIdentity(){
+  myDiscordId=null; myPlayer=null;
+  localStorage.removeItem('myDiscordId');
+  closeIdentityModal();
+  renderSidebarIdentity();
+  renderIdentityBanner();
+}
+function closeIdentityModal(){ document.getElementById('modal-identity').classList.remove('open'); }
+
+// ─────────────────────────────────────────────
 // INIT
-// ============================================================
+// ─────────────────────────────────────────────
 async function init(){
-  const params = new URLSearchParams(window.location.search);
-  currentEventId = params.get('event_id') ? parseInt(params.get('event_id')) : null;
-  if(params.get('render') === 'true') document.body.classList.add('render-mode');
+  const params=new URLSearchParams(window.location.search);
+  currentEventId=params.get('event_id')?parseInt(params.get('event_id')):null;
+  if(params.get('render')==='true') document.body.classList.add('render-mode');
 
-  await Promise.all([loadClasses(), loadRoles(), loadPlayers(), loadComps()]);
+  await Promise.all([loadClasses(),loadRoles(),loadPlayers(),loadComps()]);
   if(currentEventId) await loadEventData(currentEventId);
 
+  resolveMyPlayer();
+
   document.getElementById('loading').classList.add('hidden');
-  document.getElementById('app').style.display = 'flex';
+  document.getElementById('app').style.display='flex';
   renderProfiles();
   if(currentEventId) showView('event');
 
   if(currentEventId){
     sb.channel('event-'+currentEventId)
       .on('postgres_changes',{event:'*',schema:'public',table:'presences',filter:`event_id=eq.${currentEventId}`},()=>{
-        loadEventData(currentEventId).then(()=>renderPresence());
+        loadEventData(currentEventId).then(()=>{ renderPresence(); renderIdentityBanner(); });
       })
       .on('postgres_changes',{event:'*',schema:'public',table:'assignments',filter:`event_id=eq.${currentEventId}`},()=>{
         loadEventData(currentEventId).then(()=>{ renderComp(); renderPresence(); });
@@ -325,37 +435,23 @@ async function loadEventData(eventId){
   if(event){
     document.getElementById('event-title').textContent='⚔️ '+event.title;
     document.getElementById('event-subtitle').innerHTML=(event.event_date||'')+' — <span id="present-count">0 présents</span>';
-    // FIX: on charge la comp liée à l'event, pas de select libre
-    if(event.comp_id){
-      const comp=comps.find(c=>c.id===event.comp_id);
-      if(comp) currentComp=JSON.parse(JSON.stringify(comp));
-    }
-    // Affiche le badge du nom de la comp (non modifiable depuis l'event)
+    if(event.comp_id){ const comp=comps.find(c=>c.id===event.comp_id); if(comp) currentComp=JSON.parse(JSON.stringify(comp)); }
     renderEventCompBadge(event.comp_id);
   }
 }
 
-// ============================================================
-// FIX: badge comp dans la vue event (lecture seule)
-// ============================================================
 function renderEventCompBadge(compId){
-  const el = document.getElementById('event-comp-info');
-  if(!el) return;
-  if(!compId){
-    el.innerHTML = '<span style="font-size:12px;color:var(--text3);">Aucune comp liée</span>';
-    return;
-  }
-  const comp = comps.find(c=>c.id===compId);
-  if(!comp){
-    el.innerHTML = '<span style="font-size:12px;color:var(--text3);">Comp introuvable</span>';
-    return;
-  }
-  el.innerHTML = `<div class="comp-badge">🗂 Comp : <span class="comp-badge-name">${comp.name}</span></div>`;
+  const el=document.getElementById('event-comp-info'); if(!el) return;
+  if(!compId){ el.innerHTML='<span style="font-size:12px;color:var(--text3);">Aucune comp liée</span>'; return; }
+  const comp=comps.find(c=>c.id===compId);
+  el.innerHTML=comp
+    ?`<div class="comp-badge">🗂 Comp : <span class="comp-badge-name">${comp.name}</span></div>`
+    :'<span style="font-size:12px;color:var(--text3);">Comp introuvable</span>';
 }
 
-// ============================================================
+// ─────────────────────────────────────────────
 // HELPERS
-// ============================================================
+// ─────────────────────────────────────────────
 function getInitials(n){ return n.slice(0,2).toUpperCase(); }
 function roleDef(id){ return ROLES_DEF.find(r=>r.id===id); }
 function classDef(id){ return CLASSES_DEF.find(c=>c.id===id); }
@@ -368,9 +464,9 @@ function visibleSlots(rid){
 }
 function getAssignedRole(pid){ for(const [rid,arr] of Object.entries(assignments)){ if(arr.some(a=>a.playerId===pid)) return roleDef(rid); } return null; }
 
-// ============================================================
+// ─────────────────────────────────────────────
 // NAVIGATION
-// ============================================================
+// ─────────────────────────────────────────────
 const CH_META={profiles:['👤','profils-joueurs'],event:['⚔️','événement-actif'],comps:['🛠️','éditeur-comp'],classes:['🎨','classes-rôles']};
 function showView(v){
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
@@ -386,9 +482,9 @@ function showView(v){
   if(v==='classes') renderClassesEditor();
 }
 
-// ============================================================
-// VIEW: PROFILES
-// ============================================================
+// ─────────────────────────────────────────────
+// PROFILES
+// ─────────────────────────────────────────────
 function buildFilterRow(){
   const filters=[{id:'alpha',label:'A–Z',color:null},...CLASSES_DEF.map(c=>({id:c.id,label:c.label,color:c.color}))];
   document.getElementById('filter-row').innerHTML=filters.map(f=>`<button class="btn btn-sm ${currentFilter===f.id?'active':''}" style="${f.color&&currentFilter!==f.id?'color:'+f.color:''}" onclick="filterPlayers('${f.id}')">${f.label}</button>`).join('');
@@ -420,7 +516,7 @@ function editPlayerRoles(id){
   document.querySelectorAll('#edit-roles-list [data-rid]').forEach(el=>{ applyPillState(el,p.roles.includes(el.dataset.rid),roleDef(el.dataset.rid).color); });
   document.getElementById('modal-edit-player').classList.add('open');
 }
-function toggleEditRole(el,rid,color){ applyPillState(el,el.dataset.on!=='1',roleDef(rid).color); }
+function toggleEditRole(el,rid){ applyPillState(el,el.dataset.on!=='1',roleDef(rid).color); }
 function applyPillState(el,on,color){ el.dataset.on=on?'1':'0'; el.style.background=on?color:'transparent'; el.style.color=on?'#0e1117':color; el.style.border=`1px solid ${color}${on?'':'44'}`; }
 async function savePlayerRoles(){
   const p=players.find(pl=>pl.id===editingPlayerId);
@@ -449,11 +545,19 @@ async function confirmAddPlayer(){
 }
 function closeAddModal(){ document.getElementById('modal-player').classList.remove('open'); }
 
-// ============================================================
-// VIEW: EVENT
-// ============================================================
-async function setMyPresence(st){ alert('Présence via Discord uniquement pour l\'instant.'); }
-function renderEvent(){ renderPresence(); renderComp(); renderTempZone(); }
+// ─────────────────────────────────────────────
+// EVENT
+// ─────────────────────────────────────────────
+async function setMyPresence(st){
+  if(!myDiscordId){ openIdentityModal(); return; }
+  if(!currentEventId){ alert('Aucun événement actif.'); return; }
+  await sb.from('presences').upsert({event_id:currentEventId,discord_id:myDiscordId,status:st});
+  presence[myDiscordId]=st;
+  renderPresence();
+  renderIdentityBanner();
+}
+
+function renderEvent(){ renderIdentityBanner(); renderPresence(); renderComp(); renderTempZone(); }
 
 function getStatusStyle(st){
   if(st==='present') return {border:'rgba(61,220,132,.4)',bg:'rgba(61,220,132,.08)',color:'#3ddc84'};
@@ -462,21 +566,19 @@ function getStatusStyle(st){
   return {border:'rgba(255,255,255,0.07)',bg:'var(--bg3)',color:'var(--text2)'};
 }
 
-function showPlayerRolesPopup(e, playerDiscordId, playerName, chipColor){
+function showPlayerRolesPopup(e,playerDiscordId,playerName,chipColor){
   e.stopPropagation();
   document.querySelectorAll('.player-roles-popup').forEach(el=>el.remove());
-  const p = players.find(pl=>pl.discord_id===playerDiscordId);
-  if(!p) return;
-  const rolesHtml = p.roles.length
-    ? p.roles.map(rid=>{ const r=roleDef(rid); return r?`<span class="role-pill" style="background:${r.color}18;color:${r.color};margin:2px 3px;">${r.label}</span>`:''; }).join('')
-    : '<span style="color:var(--text3);font-size:11px;">Aucun rôle défini</span>';
+  const p=players.find(pl=>pl.discord_id===playerDiscordId); if(!p) return;
+  const rolesHtml=p.roles.length
+    ?p.roles.map(rid=>{const r=roleDef(rid);return r?`<span class="role-pill" style="background:${r.color}18;color:${r.color};margin:2px 3px;">${r.label}</span>`:''}).join('')
+    :'<span style="color:var(--text3);font-size:11px;">Aucun rôle défini</span>';
   const popup=document.createElement('div');
   popup.className='player-roles-popup';
   popup.innerHTML=`<div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:${chipColor};margin-bottom:8px;">${playerName}</div><div style="display:flex;flex-wrap:wrap;">${rolesHtml}</div>`;
   document.body.appendChild(popup);
-  const x=Math.min(e.clientX+10,window.innerWidth-300);
-  const y=Math.min(e.clientY+10,window.innerHeight-200);
-  popup.style.left=x+'px'; popup.style.top=y+'px';
+  popup.style.left=Math.min(e.clientX+10,window.innerWidth-300)+'px';
+  popup.style.top=Math.min(e.clientY+10,window.innerHeight-200)+'px';
   setTimeout(()=>{ document.addEventListener('click',()=>popup.remove(),{once:true}); },50);
 }
 
@@ -492,13 +594,15 @@ function renderPresence(){
   const makeChip=(p,useStatusColor,assignedRole)=>{
     const st=presence[p.discord_id]||'none';
     const isFlagged=flagged.has(p.discord_id);
+    const isMe=p.discord_id===myDiscordId;
     let border,bg,color,avatarColor;
     if(useStatusColor){ const s=getStatusStyle(st); border=s.border;bg=s.bg;color=s.color;avatarColor=s.color; }
     else { const r=assignedRole; const cls=r&&r.cls?classDef(r.cls):null; const c=cls?cls.color:(r?r.color:'#8b92a8'); border=c+'55';bg=c+'12';color=c;avatarColor=c; }
+    const meStyle=isMe?'box-shadow:0 0 0 2px rgba(255,255,255,0.35);':'';
     const avatarHtml=`<div style="width:18px;height:18px;border-radius:50%;background:${avatarColor}22;color:${avatarColor};display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:7px;flex-shrink:0;">${getInitials(p.name)}</div>`;
-    return `<div class="presence-chip" style="border-color:${border};background:${bg};color:${color};" onclick="showPlayerRolesPopup(event,'${p.discord_id}','${p.name}','${color}')">
+    return `<div class="presence-chip" style="border-color:${border};background:${bg};color:${color};${meStyle}" onclick="showPlayerRolesPopup(event,'${p.discord_id}','${p.name}','${color}')">
       ${avatarHtml}
-      <span>${p.name}</span>
+      <span>${p.name}${isMe?' <span style="font-size:9px;opacity:.6;">(moi)</span>':''}</span>
       <span class="chip-flag ${isFlagged?'on':''}" title="Marquer un doute" onclick="toggleFlag('${p.discord_id}',event)">⚑</span>
     </div>`;
   };
@@ -532,7 +636,7 @@ function renderComp(){
     const roles=groups[cls.id].sort((a,b)=>ROLES_DEF.findIndex(r=>r.id===a.rid)-ROLES_DEF.findIndex(r=>r.id===b.rid));
     return `<div class="role-block">
       <div class="role-block-header"><span class="role-block-label" style="color:${cls.color}">${cls.label}</span></div>
-      ${roles.map(({rid,count,strict})=>{
+      ${roles.map(({rid,count})=>{
         const r=roleDef(rid)||{label:rid,color:'#aaa',unique:false};
         const assigned=assignments[rid]||[]; const nSlots=visibleSlots(rid);
         const weapCnt={}; assigned.forEach(a=>{if(a.weapon){const k=a.weapon.toLowerCase();weapCnt[k]=(weapCnt[k]||0)+1;}});
@@ -563,16 +667,16 @@ function renderTempZone(){
   if(!tempRoles.length){ z.innerHTML=''; return; }
   z.innerHTML=`<div class="temp-section"><div class="temp-section-title">Rôles temporaires</div>${tempRoles.map(tr=>{
     const asgns=tempAssignments[tr.id]||[];
-    return `<div class="temp-role-block"><div class="temp-role-header"><input class="temp-name-input" value="${tr.label}" oninput="renameTempRole('${tr.id}',this.value)"><button class="btn btn-danger btn-sm" onclick="deleteTempRole('${tr.id}')">🗑</button></div>${asgns.map((asgn,i)=>{ const p=players.find(pl=>pl.discord_id===asgn.playerId); return p?`<div class="player-slot">${avatarEl(p.name,p.color||'#5865F2',24)}<span style="font-weight:500;flex:1;">${p.name}</span><span class="slot-weapon" style="color:var(--text3);">${asgn.weapon||'—'}</span><button class="btn btn-danger btn-icon" onclick="removeTempAssign('${tr.id}',${i})" style="font-size:10px;">✕</button></div>`:''; }).join('')}<div class="empty-slot" onclick="openTempAssign('${tr.id}')">+ Assigner un joueur</div></div>`;
+    return `<div class="temp-role-block"><div class="temp-role-header"><input class="temp-name-input" value="${tr.label}" oninput="renameTempRole('${tr.id}',this.value)"><button class="btn btn-danger btn-sm" onclick="deleteTempRole('${tr.id}')">🗑</button></div>${asgns.map((asgn,i)=>{const p=players.find(pl=>pl.discord_id===asgn.playerId);return p?`<div class="player-slot">${avatarEl(p.name,p.color||'#5865F2',24)}<span style="font-weight:500;flex:1;">${p.name}</span><span class="slot-weapon" style="color:var(--text3);">${asgn.weapon||'—'}</span><button class="btn btn-danger btn-icon" onclick="removeTempAssign('${tr.id}',${i})" style="font-size:10px;">✕</button></div>`:'';}).join('')}<div class="empty-slot" onclick="openTempAssign('${tr.id}')">+ Assigner un joueur</div></div>`;
   }).join('')}</div>`;
 }
 function renameTempRole(id,label){ const t=tempRoles.find(r=>r.id===id); if(t) t.label=label; }
 function deleteTempRole(id){ tempRoles=tempRoles.filter(r=>r.id!==id); delete tempAssignments[id]; renderTempZone(); renderPresence(); }
 function removeTempAssign(id,idx){ if(!tempAssignments[id]) return; tempAssignments[id].splice(idx,1); if(!tempAssignments[id].length) delete tempAssignments[id]; renderTempZone(); renderPresence(); }
 
-// ============================================================
+// ─────────────────────────────────────────────
 // FLOATING ASSIGN
-// ============================================================
+// ─────────────────────────────────────────────
 function openFloatingAssign(e,rid){ pendingRoleId=rid; pendingPlayerId=null; pendingIsTemp=false; const r=roleDef(rid)||{label:rid,color:'#aaa',unique:false}; _showFloating(e,rid,r,false); }
 function openTempAssign(tid){ pendingTempId=tid; pendingPlayerId=null; pendingIsTemp=true; const tr=tempRoles.find(t=>t.id===tid)||{label:''}; const fakeEvt={currentTarget:{getBoundingClientRect:()=>({right:window.innerWidth/2,top:window.innerHeight/3})}}; _showFloating(fakeEvt,tid,{label:tr.label,color:'#8b92a8',unique:false},true); }
 function _showFloating(e,roleId,r,isTemp){
@@ -585,7 +689,7 @@ function _showFloating(e,roleId,r,isTemp){
   candidates.forEach(p=>{ const isAlready=already.includes(p.discord_id); const usedIn=Object.entries(assignments).find(([rid2,arr])=>rid2!==roleId&&arr.some(a=>a.playerId===p.discord_id));
     html+=`<div class="modal-player-opt ${isAlready?'dimmed':''}" data-pid="${p.discord_id}">${avatarEl(p.name,p.color||'#5865F2',28)}<div style="flex:1;"><div style="font-weight:500;">${p.name}${flagged.has(p.discord_id)?'<span style="color:#f0c040;font-size:10px;margin-left:4px;">⚑</span>':''}</div><div style="font-size:11px;color:var(--text3);">${stIco(p.discord_id)} ${usedIn?'→ déjà en '+(roleDef(usedIn[0])||{label:usedIn[0]}).label:'disponible'}</div></div>${isAlready?'<span style="font-size:11px;color:var(--text3);">assigné</span>':''}</div>`;
   });
-  html+=`</div><input id="fa-weapon" class="weapon-input" placeholder="Arme (ex: Permafrost, Hache...)" style="margin-top:10px;display:none;"><div id="fa-dup-warn" class="dup-warn" style="display:none;"></div><div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end;"><button class="btn btn-sm" onclick="closeFloating()">Fermer</button><button class="btn btn-primary btn-sm" onclick="confirmFloating()">Confirmer</button></div>`;
+  html+=`</div><input id="fa-weapon" class="weapon-input" placeholder="Arme (ex: Permafrost, Hache...)" style="margin-top:10px;display:none;"><div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end;"><button class="btn btn-sm" onclick="closeFloating()">Fermer</button><button class="btn btn-primary btn-sm" onclick="confirmFloating()">Confirmer</button></div>`;
   modal.innerHTML=html;
   modal.querySelectorAll('.modal-player-opt:not(.dimmed)').forEach(el=>{ el.onclick=()=>{ const wasSelected=el.classList.contains('selected'); modal.querySelectorAll('.modal-player-opt').forEach(x=>x.classList.remove('selected')); el.classList.add('selected'); pendingPlayerId=el.dataset.pid; const w=document.getElementById('fa-weapon'); w.style.display='block'; w.focus(); if(wasSelected) setTimeout(confirmFloating,10); }; });
   modal.style.display='block';
@@ -606,9 +710,9 @@ async function confirmFloating(){
 function closeFloating(){ document.getElementById('modal-assign').style.display='none'; }
 document.addEventListener('click',e=>{ const m=document.getElementById('modal-assign'); if(m.style.display!=='none'&&!m.contains(e.target)&&!e.target.closest('.empty-slot')&&!e.target.closest('.temp-role-block')) closeFloating(); });
 
-// ============================================================
-// VIEW: COMP EDITOR
-// ============================================================
+// ─────────────────────────────────────────────
+// COMP EDITOR
+// ─────────────────────────────────────────────
 function renderCompEditor(){
   document.getElementById('comp-tabs').innerHTML=comps.map((c,i)=>`<button class="btn btn-sm ${i===editCompIdx?'active':''}" onclick="selectComp(${i})">${c.name}</button>`).join('');
   document.getElementById('comp-name-input').value=editingComp?.name||'';
@@ -632,46 +736,80 @@ async function saveComp(){
   comps[editCompIdx]=data; editingComp=JSON.parse(JSON.stringify(data)); renderCompEditor();
   const btn=document.querySelector('[onclick="saveComp()"]'); if(btn){const o=btn.textContent;btn.textContent='✓ Sauvegardé';setTimeout(()=>btn.textContent=o,1500);}
 }
-async function newComp(){ const {data}=await sb.from('comps').insert({name:'Nouvelle comp',slots:{}}).select().single(); comps.push(data); editCompIdx=comps.length-1; editingComp=JSON.parse(JSON.stringify(data)); renderCompEditor(); }
+async function newComp(){
+  const {data}=await sb.from('comps').insert({name:'Nouvelle comp',slots:{}}).select().single();
+  comps.push(data); editCompIdx=comps.length-1; editingComp=JSON.parse(JSON.stringify(data)); renderCompEditor();
+}
 
-// ============================================================
-// FIX BUG 1 : Suppression réelle et persistée de la composition
-// ============================================================
+// FIX 2 : Suppression comp avec cascade sur les events liés
 async function deleteCurrentComp(){
   if(comps.length<=1){ alert('Au moins une composition est requise.'); return; }
-  const compToDelete = comps[editCompIdx];
-  if(!confirm(`Supprimer la composition "${compToDelete.name}" ?`)) return;
+  const compToDelete=comps[editCompIdx];
+  const {data:linkedEvents}=await sb.from('events').select('id,title').eq('comp_id',compToDelete.id);
 
-  // Suppression en base avec vérification de l'erreur
-  const { error } = await sb.from('comps').delete().eq('id', compToDelete.id);
-  if(error){ alert('Erreur lors de la suppression : ' + error.message); return; }
+  let msg=`Supprimer la composition "${compToDelete.name}" ?`;
+  if(linkedEvents&&linkedEvents.length>0){
+    msg=`⚠️ La composition "${compToDelete.name}" est utilisée par ${linkedEvents.length} événement(s) :\n`
+      +linkedEvents.map(e=>`  • ${e.title}`).join('\n')
+      +`\n\nCes événements et toutes leurs données seront également supprimés.\n\nConfirmer ?`;
+  }
+  if(!confirm(msg)) return;
 
-  // Mise à jour du state local APRÈS confirmation Supabase
-  comps.splice(editCompIdx, 1);
-  editCompIdx = Math.max(0, editCompIdx - 1);
-  editingComp = JSON.parse(JSON.stringify(comps[editCompIdx]));
-
-  // Si la comp supprimée était la comp active de l'event, on réinitialise
-  if(currentComp && currentComp.id === compToDelete.id){
-    currentComp = comps.length > 0 ? JSON.parse(JSON.stringify(comps[0])) : null;
+  // Cascade : supprimer données des events liés
+  if(linkedEvents&&linkedEvents.length>0){
+    const ids=linkedEvents.map(e=>e.id);
+    for(const eid of ids){
+      await sb.from('assignments').delete().eq('event_id',eid);
+      await sb.from('presences').delete().eq('event_id',eid);
+      await sb.from('flagged').delete().eq('event_id',eid);
+    }
+    await sb.from('events').delete().in('id',ids);
   }
 
+  const {error}=await sb.from('comps').delete().eq('id',compToDelete.id);
+  if(error){ alert('Erreur : '+error.message); return; }
+
+  comps.splice(editCompIdx,1);
+  editCompIdx=Math.max(0,editCompIdx-1);
+  editingComp=JSON.parse(JSON.stringify(comps[editCompIdx]));
+  if(currentComp&&currentComp.id===compToDelete.id){
+    currentComp=comps.length>0?JSON.parse(JSON.stringify(comps[0])):null;
+  }
   renderCompEditor();
 }
 
-// ============================================================
-// VIEW: CLASSES & ROLES
-// ============================================================
+// ─────────────────────────────────────────────
+// CLASSES & ROLES — FIX 1 : ordre persisté en DB
+// ─────────────────────────────────────────────
 let dragSrcIdx=null, dragSrcType=null;
+
 function initDrag(container,type){
   container.querySelectorAll('[data-drag-idx]').forEach(row=>{
     row.addEventListener('dragstart',e=>{ dragSrcIdx=parseInt(row.dataset.dragIdx); dragSrcType=type; row.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
     row.addEventListener('dragend',()=>row.classList.remove('dragging'));
     row.addEventListener('dragover',e=>{ e.preventDefault(); container.querySelectorAll('[data-drag-idx]').forEach(r=>r.classList.remove('drag-over')); row.classList.add('drag-over'); });
     row.addEventListener('dragleave',()=>row.classList.remove('drag-over'));
-    row.addEventListener('drop',e=>{ e.preventDefault(); row.classList.remove('drag-over'); const targetIdx=parseInt(row.dataset.dragIdx); if(dragSrcType!==type||dragSrcIdx===targetIdx) return; const arr=type==='class'?CLASSES_DEF:ROLES_DEF; const [moved]=arr.splice(dragSrcIdx,1); arr.splice(targetIdx,0,moved); const table=type==='class'?'classes_def':'roles_def'; arr.forEach((item,i)=>{sb.from(table).update({sort_order:i}).eq('id',item.id);}); renderClassesEditor(); if(document.getElementById('view-event').classList.contains('active')) renderEvent(); if(document.getElementById('view-comps').classList.contains('active')) renderCompEditor(); });
+    row.addEventListener('drop',async e=>{
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      const targetIdx=parseInt(row.dataset.dragIdx);
+      if(dragSrcType!==type||dragSrcIdx===targetIdx) return;
+
+      const arr=type==='class'?CLASSES_DEF:ROLES_DEF;
+      const [moved]=arr.splice(dragSrcIdx,1);
+      arr.splice(targetIdx,0,moved);
+
+      // Persiste TOUS les sort_order en DB après réordonnement
+      const table=type==='class'?'classes_def':'roles_def';
+      await Promise.all(arr.map((item,i)=>sb.from(table).update({sort_order:i}).eq('id',item.id)));
+
+      renderClassesEditor();
+      if(document.getElementById('view-event').classList.contains('active')) renderEvent();
+      if(document.getElementById('view-comps').classList.contains('active')) renderCompEditor();
+    });
   });
 }
+
 function renderClassesEditor(){
   const cl=document.getElementById('classes-list');
   cl.innerHTML=CLASSES_DEF.map((c,i)=>`<div class="cls-row" draggable="true" data-drag-idx="${i}"><span style="color:var(--text3);font-size:12px;cursor:grab;margin-right:2px;">⠿</span><div style="width:10px;height:10px;border-radius:50%;background:${c.color};flex-shrink:0;"></div><span style="flex:1;font-weight:500;">${c.label}</span><input type="color" value="${c.color}" onchange="updateClassColor('${c.id}',this.value)"><button class="btn btn-danger btn-icon" onclick="deleteClass('${c.id}')">✕</button></div>`).join('');
@@ -681,12 +819,39 @@ function renderClassesEditor(){
   initDrag(rl,'role');
   document.getElementById('new-role-class').innerHTML=CLASSES_DEF.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
 }
-async function updateClassColor(id,color){ const c=CLASSES_DEF.find(cc=>cc.id===id); if(c) c.color=color; ROLES_DEF.filter(r=>r.cls===id).forEach(r=>r.color=color); await sb.from('classes_def').update({color}).eq('id',id); await sb.from('roles_def').update({color}).eq('cls',id); renderClassesEditor(); }
-async function addClass(){ const name=document.getElementById('new-class-name').value.trim(); const color=document.getElementById('new-class-color').value; if(!name) return; const id=name.toLowerCase().replace(/\s+/g,'-'); if(CLASSES_DEF.find(c=>c.id===id)){alert('Classe déjà existante');return;} const sort_order=CLASSES_DEF.length; const {data}=await sb.from('classes_def').insert({id,label:name,color,sort_order}).select().single(); CLASSES_DEF.push(data); document.getElementById('new-class-name').value=''; renderClassesEditor(); if(document.getElementById('view-comps').classList.contains('active')) renderCompEditor(); }
-async function deleteClass(id){ if(ROLES_DEF.some(r=>r.cls===id)){alert('Supprimez d\'abord les rôles de cette classe.');return;} await sb.from('classes_def').delete().eq('id',id); CLASSES_DEF=CLASSES_DEF.filter(c=>c.id!==id); renderClassesEditor(); }
-async function addRole(){ const name=document.getElementById('new-role-name').value.trim(); const clsId=document.getElementById('new-role-class').value; if(!name||!clsId) return; const id=name.toLowerCase().replace(/\s+/g,'-'); if(ROLES_DEF.find(r=>r.id===id)){alert('Rôle déjà existant');return;} const cls=classDef(clsId)||{color:'#aaa'}; const sort_order=ROLES_DEF.length; const {data}=await sb.from('roles_def').insert({id,label:name,color:cls.color,cls:clsId,is_unique:false,sort_order}).select().single(); ROLES_DEF.push(data); document.getElementById('new-role-name').value=''; renderClassesEditor(); if(document.getElementById('view-comps').classList.contains('active')) renderCompEditor(); }
-async function deleteRole(id){ await sb.from('roles_def').delete().eq('id',id); ROLES_DEF=ROLES_DEF.filter(r=>r.id!==id); renderClassesEditor(); }
-async function saveClassesRoles(){ const btn=document.querySelector('[onclick="saveClassesRoles()"]'); if(btn){const o=btn.textContent;btn.textContent='✓ Sauvegardé';setTimeout(()=>btn.textContent=o,1500);} }
+
+async function updateClassColor(id,color){
+  const c=CLASSES_DEF.find(cc=>cc.id===id); if(c) c.color=color;
+  ROLES_DEF.filter(r=>r.cls===id).forEach(r=>r.color=color);
+  await sb.from('classes_def').update({color}).eq('id',id);
+  await sb.from('roles_def').update({color}).eq('cls',id);
+  renderClassesEditor();
+}
+async function addClass(){
+  const name=document.getElementById('new-class-name').value.trim(); const color=document.getElementById('new-class-color').value; if(!name) return;
+  const id=name.toLowerCase().replace(/\s+/g,'-');
+  if(CLASSES_DEF.find(c=>c.id===id)){alert('Classe déjà existante');return;}
+  const sort_order=CLASSES_DEF.length;
+  const {data}=await sb.from('classes_def').insert({id,label:name,color,sort_order}).select().single();
+  CLASSES_DEF.push(data); document.getElementById('new-class-name').value=''; renderClassesEditor();
+  if(document.getElementById('view-comps').classList.contains('active')) renderCompEditor();
+}
+async function deleteClass(id){
+  if(ROLES_DEF.some(r=>r.cls===id)){alert('Supprimez d\'abord les rôles de cette classe.');return;}
+  await sb.from('classes_def').delete().eq('id',id); CLASSES_DEF=CLASSES_DEF.filter(c=>c.id!==id); renderClassesEditor();
+}
+async function addRole(){
+  const name=document.getElementById('new-role-name').value.trim(); const clsId=document.getElementById('new-role-class').value; if(!name||!clsId) return;
+  const id=name.toLowerCase().replace(/\s+/g,'-');
+  if(ROLES_DEF.find(r=>r.id===id)){alert('Rôle déjà existant');return;}
+  const cls=classDef(clsId)||{color:'#aaa'}; const sort_order=ROLES_DEF.length;
+  const {data}=await sb.from('roles_def').insert({id,label:name,color:cls.color,cls:clsId,is_unique:false,sort_order}).select().single();
+  ROLES_DEF.push(data); document.getElementById('new-role-name').value=''; renderClassesEditor();
+  if(document.getElementById('view-comps').classList.contains('active')) renderCompEditor();
+}
+async function deleteRole(id){
+  await sb.from('roles_def').delete().eq('id',id); ROLES_DEF=ROLES_DEF.filter(r=>r.id!==id); renderClassesEditor();
+}
 
 init();
 </script>
