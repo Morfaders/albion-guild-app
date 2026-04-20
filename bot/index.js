@@ -108,15 +108,25 @@ async function buildEventEmbed(eventId) {
         clsRoles.forEach(r => {
           const count = comp.slots[r.id].count || 0;
           const asgn = assignments[r.id] || [];
+          // Nombre total de lignes = max entre slots définis et joueurs assignés (surplus inclus)
+          const totalLines = Math.max(count, asgn.length);
           const roleLabel = r.label.padEnd(13);
-          for(let i = 0; i < count; i++) {
+          const emptyLabel = ' '.repeat(13);
+
+          for(let i = 0; i < totalLines; i++) {
             const a = asgn[i];
+            // Le nom du rôle n'apparaît que sur la première ligne du groupe
+            const label = i === 0 ? roleLabel : emptyLabel;
             if(a) {
               const p = (players||[]).find(pl => pl.discord_id === a.discordId);
+              const name = p ? p.name : '?';
               const weapon = a.weapon ? ` — ${a.weapon}` : '';
-              compStr += `${clsEmoji} \`${roleLabel}\` ${p ? p.name : '?'}${weapon}\n`;
+              // Si c'est un slot de surplus (au-delà du count), on ajoute ⚠
+              const surplus = i >= count ? ' ⚠' : '';
+              compStr += `${clsEmoji} \`${label}\` ${name}${weapon}${surplus}\n`;
             } else {
-              compStr += `${clsEmoji} \`${roleLabel}\` _—_\n`;
+              // Slot vide : juste un tiret, pas de "libre"
+              compStr += `${clsEmoji} \`${label}\` —\n`;
             }
           }
         });
