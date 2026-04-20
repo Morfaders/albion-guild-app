@@ -121,8 +121,8 @@ async function buildEventEmbed(eventId) {
               const p = (players||[]).find(pl => pl.discord_id === a.discordId);
               const name = p ? p.name : '?';
               const weapon = a.weapon ? ` — ${a.weapon}` : '';
-              // Si c'est un slot de surplus (au-delà du count), on ajoute ⚠
-              const surplus = i >= count ? ' ⚠' : '';
+              // Si c'est un slot de surplus (au-delà du count), on ajoute ⚠ retiré car visuel Moche
+              const surplus = i >= count ? '' : '';
               compStr += `${clsEmoji} \`${label}\` ${name}${weapon}${surplus}\n`;
             } else {
               // Slot vide : juste un tiret, pas de "libre"
