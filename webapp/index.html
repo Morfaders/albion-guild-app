@@ -513,20 +513,18 @@ async function toggleFlag(discordId,e){
   renderPresence();
 }
 
-// FIX 1 : renderComp — masquer les rôles sans aucun joueur assigné
+// renderComp — affiche tous les slots des rôles présents dans la comp (count > 0), même vides
 function renderComp(){
   const zone=document.getElementById('comp-zone');if(!currentComp){zone.innerHTML='';return;}
   const groups={};
   Object.entries(currentComp.slots||{}).forEach(([rid,slotDef])=>{
+    // On masque uniquement les rôles non configurés dans la comp (count = 0 ou absent)
     if(!slotDef||slotDef.count===0)return;
     const r=roleDef(rid);if(!r)return;
-    // FIX 1 : on n'affiche ce rôle que si au moins 1 joueur y est assigné
-    const assigned=assignments[rid]||[];
-    if(assigned.length===0)return;
     const cls=r.cls||'other';if(!groups[cls])groups[cls]=[];
     groups[cls].push({rid,count:slotDef.count,strict:slotDef.strict});
   });
-  if(Object.keys(groups).length===0){zone.innerHTML='<div style="color:var(--text3);padding:20px;font-size:13px;">Aucun joueur assigné pour l\'instant.</div>';return;}
+  if(Object.keys(groups).length===0){zone.innerHTML='<div style="color:var(--text3);padding:20px;font-size:13px;">Aucune composition chargée.</div>';return;}
   zone.innerHTML=CLASSES_DEF.filter(cls=>groups[cls.id]).map(cls=>{
     const roles=groups[cls.id].sort((a,b)=>ROLES_DEF.findIndex(r=>r.id===a.rid)-ROLES_DEF.findIndex(r=>r.id===b.rid));
     return `<div class="role-block"><div class="role-block-header"><span class="role-block-label" style="color:${cls.color}">${cls.label}</span></div>${roles.map(({rid,count})=>{

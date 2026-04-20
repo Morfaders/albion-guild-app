@@ -116,7 +116,7 @@ async function buildEventEmbed(eventId) {
               const weapon = a.weapon ? ` — ${a.weapon}` : '';
               compStr += `${clsEmoji} \`${roleLabel}\` ${p ? p.name : '?'}${weapon}\n`;
             } else {
-              compStr += `${clsEmoji} \`${roleLabel}\` _—_\n`;
+              compStr += `${clsEmoji} \`${roleLabel}\` _— libre —_\n`;
             }
           }
         });
@@ -243,19 +243,6 @@ client.on('interactionCreate', async interaction => {
     await interaction.deferUpdate();
 
     await supabase.from('presences').upsert({ event_id: eventId, discord_id: discordId, status: action });
-
-    // FIX 5 : après avoir cliqué présence, on envoie un message éphémère avec le lien
-    // personnalisé incluant le discord_id → la webapp identifie automatiquement le joueur
-    const { data: event } = await supabase.from('events').select('id').eq('id', eventId).single();
-    if(event) {
-      const webappUrl = `${process.env.WEBAPP_URL}?event_id=${eventId}&discord_id=${discordId}`;
-      const statusLabel = action==='present'?'✓ Présent':action==='maybe'?'? Peut-être':'✕ Absent';
-      await interaction.followUp({
-        content: `${statusLabel} — [🛠 Ouvrir la comp (lien personnel)](${webappUrl})`,
-        ephemeral: true
-      });
-    }
-
     await updateEventMessage(eventId);
   }
 });
