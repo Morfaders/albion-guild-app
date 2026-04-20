@@ -131,10 +131,11 @@ async function buildEventEmbed(eventId) {
             if(a) {
               const p = (players||[]).find(pl => pl.discord_id === a.discordId);
               const name = (p ? p.name : '?').padEnd(nameColWidth);
+              // Nom ET arme dans le même bloc code pour alignement monospace
               const weapon = a.weapon ? ` — ${a.weapon}` : '';
-              compStr += `${clsEmoji} \`${label}\` ${name}${weapon}\n`;
+              compStr += `${clsEmoji} \`${label}  ${name}${weapon}\`\n`;
             } else {
-              compStr += `${clsEmoji} \`${label}\` ${'—'.padEnd(nameColWidth)}\n`;
+              compStr += `${clsEmoji} \`${label}  ${'—'.padEnd(nameColWidth)}\`\n`;
             }
           }
         });
