@@ -116,7 +116,7 @@ async function buildEventEmbed(eventId) {
               const weapon = a.weapon ? ` — ${a.weapon}` : '';
               compStr += `${clsEmoji} \`${roleLabel}\` ${p ? p.name : '?'}${weapon}\n`;
             } else {
-              compStr += `${clsEmoji} \`${roleLabel}\` _— libre —_\n`;
+              compStr += `${clsEmoji} \`${roleLabel}\` _—_\n`;
             }
           }
         });
