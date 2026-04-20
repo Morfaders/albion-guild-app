@@ -101,6 +101,17 @@ async function buildEventEmbed(eventId) {
   if(event.comp_id) {
     const { data: comp } = await supabase.from('comps').select('*').eq('id', event.comp_id).single();
     if(comp && comp.slots) {
+
+      // Calcul de la largeur de la colonne rôle = longueur du label le plus long dans cette comp
+      const activeRoles = (roles||[]).filter(r => comp.slots[r.id] && comp.slots[r.id].count > 0);
+      const roleColWidth = Math.max(...activeRoles.map(r => r.label.length), 4);
+
+      // Calcul de la largeur de la colonne nom = nom de joueur le plus long assigné
+      const allAssignedPlayerNames = Object.values(assignments)
+        .flat()
+        .map(a => { const p = (players||[]).find(pl => pl.discord_id === a.discordId); return p ? p.name : '?'; });
+      const nameColWidth = Math.max(...allAssignedPlayerNames.map(n => n.length), 4);
+
       (classes||[]).forEach(cls => {
         const clsRoles = (roles||[]).filter(r => r.cls === cls.id && comp.slots[r.id] && comp.slots[r.id].count > 0);
         if(!clsRoles.length) return;
@@ -108,25 +119,22 @@ async function buildEventEmbed(eventId) {
         clsRoles.forEach(r => {
           const count = comp.slots[r.id].count || 0;
           const asgn = assignments[r.id] || [];
-          // Nombre total de lignes = max entre slots définis et joueurs assignés (surplus inclus)
           const totalLines = Math.max(count, asgn.length);
-          const roleLabel = r.label.padEnd(13);
-          const emptyLabel = ' '.repeat(13);
+
+          // Colonne rôle : largeur dynamique, vide sur les lignes suivantes
+          const roleLabel = r.label.padEnd(roleColWidth);
+          const emptyLabel = ' '.repeat(roleColWidth);
 
           for(let i = 0; i < totalLines; i++) {
             const a = asgn[i];
-            // Le nom du rôle n'apparaît que sur la première ligne du groupe
             const label = i === 0 ? roleLabel : emptyLabel;
             if(a) {
               const p = (players||[]).find(pl => pl.discord_id === a.discordId);
-              const name = p ? p.name : '?';
+              const name = (p ? p.name : '?').padEnd(nameColWidth);
               const weapon = a.weapon ? ` — ${a.weapon}` : '';
-              // Si c'est un slot de surplus (au-delà du count), on ajoute ⚠ retiré car visuel Moche
-              const surplus = i >= count ? '' : '';
-              compStr += `${clsEmoji} \`${label}\` ${name}${weapon}${surplus}\n`;
+              compStr += `${clsEmoji} \`${label}\` ${name}${weapon}\n`;
             } else {
-              // Slot vide : juste un tiret, pas de "libre"
-              compStr += `${clsEmoji} \`${label}\` —\n`;
+              compStr += `${clsEmoji} \`${label}\` ${'—'.padEnd(nameColWidth)}\n`;
             }
           }
         });
