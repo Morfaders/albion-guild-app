@@ -2,239 +2,455 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Albion Guild — Comp Manager</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--bg:#0e1117;--bg2:#161b27;--bg3:#1e2536;--bg4:#252d3d;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.14);--text:#e8eaf0;--text2:#8b92a8;--text3:#555e75;--accent:#5865F2;--accent2:#4752c4;--r:8px;--r2:12px;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh;}
-.app{display:flex;height:100vh;overflow:hidden;}
-.sidebar{width:240px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
-.sidebar-header{padding:16px;border-bottom:1px solid var(--border);}
-.guild-name{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;}
-.guild-icon{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;}
-.sidebar-label{font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:10px 16px 4px;}
-.nav-item{display:flex;align-items:center;gap:8px;padding:7px 16px;cursor:pointer;border-radius:4px;margin:0 6px;color:var(--text2);font-size:14px;transition:all .12s;}
-.nav-item:hover{background:var(--bg3);color:var(--text);}
-.nav-item.active{background:var(--bg4);color:var(--text);}
-.nav-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
-.sidebar-bottom{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;}
-.user-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;cursor:pointer;transition:opacity .12s;}
-.user-avatar:hover{opacity:.8;}
-.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
-.channel-header{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
-.channel-name{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;letter-spacing:.04em;}
-.content{padding:20px;flex:1;max-width:980px;width:100%;}
-.view{display:none;}.view.active{display:block;}
-.btn{padding:7px 14px;border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);transition:all .12s;}
-.btn:hover{background:var(--bg4);}
+:root{
+  --bg:#0e1117;--bg2:#161b27;--bg3:#1e2536;--bg4:#252d3d;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.14);
+  --text:#e8eaf0;--text2:#8b92a8;--text3:#555e75;
+  --accent:#5865F2;--accent2:#4752c4;
+  --r:8px;--r2:12px;
+  --nav-h:64px; /* bottom nav height */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;}
+
+/* ── APP SHELL ───────────────────────────────── */
+.app{display:flex;flex-direction:column;height:100%;height:100dvh;}
+
+/* Top header */
+.top-bar{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 16px;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.guild-icon{width:30px;height:30px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;flex-shrink:0;}
+.top-title{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;letter-spacing:.04em;flex:1;}
+.top-subtitle{font-size:11px;color:var(--text3);}
+.avatar-btn{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;cursor:pointer;flex-shrink:0;border:none;color:var(--text);transition:opacity .15s;}
+.avatar-btn:hover{opacity:.8;}
+
+/* Page area */
+.pages{flex:1;overflow:hidden;position:relative;}
+.page{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;padding:16px 16px calc(16px + var(--nav-h) + var(--safe-bottom));}
+.page.active{display:block;}
+
+/* Bottom nav */
+.bottom-nav{
+  display:flex;
+  background:var(--bg2);border-top:1px solid var(--border);
+  padding-bottom:var(--safe-bottom);
+  flex-shrink:0;
+}
+.nav-tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;padding:10px 4px;cursor:pointer;
+  color:var(--text3);font-size:10px;font-weight:500;letter-spacing:.04em;
+  border:none;background:transparent;
+  transition:color .15s;
+  position:relative;
+  min-height:var(--nav-h);
+}
+.nav-tab.active{color:var(--text);}
+.nav-tab .tab-icon{font-size:20px;line-height:1;}
+.nav-tab .tab-dot{
+  position:absolute;top:8px;right:calc(50% - 14px);
+  width:7px;height:7px;border-radius:50%;
+  display:none;
+}
+.nav-tab.active .tab-dot{display:block;}
+.nav-tab[data-view="profiles"] .tab-dot{background:#5865F2;}
+.nav-tab[data-view="event"] .tab-dot{background:#3ddc84;}
+.nav-tab[data-view="comps"] .tab-dot{background:#f0c040;}
+.nav-tab[data-view="classes"] .tab-dot{background:#b478f0;}
+
+/* ── BUTTONS ─────────────────────────────────── */
+.btn{padding:9px 16px;border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);transition:all .12s;-webkit-user-select:none;user-select:none;}
+.btn:active{opacity:.75;}
 .btn.active{background:#fff;color:#000;border-color:#fff;}
 .btn-primary{background:var(--accent);border-color:var(--accent);color:white;}
 .btn-primary:hover{background:var(--accent2);border-color:var(--accent2);}
 .btn-success{background:rgba(61,220,132,.15);border-color:rgba(61,220,132,.35);color:#3ddc84;}
-.btn-success:hover{background:rgba(61,220,132,.25);}
 .btn-warning{background:rgba(240,192,64,.15);border-color:rgba(240,192,64,.35);color:#f0c040;}
-.btn-warning:hover{background:rgba(240,192,64,.25);}
 .btn-danger{background:rgba(240,71,71,.15);border-color:rgba(240,71,71,.35);color:#f04747;}
-.btn-danger:hover{background:rgba(240,71,71,.25);}
-.btn-sm{padding:4px 10px;font-size:11px;}
-.btn-icon{padding:4px 8px;font-size:12px;line-height:1;}
-.player-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:16px;}
-.player-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;transition:border-color .15s;}
-.player-card:hover{border-color:var(--border2);}
-.role-pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;}
-.presence-bar{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:14px;}
-.presence-bar-title{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--text2);text-transform:uppercase;margin-bottom:10px;}
-.presence-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);font-size:12px;color:var(--text2);cursor:pointer;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-icon{padding:6px 10px;font-size:13px;line-height:1;}
+
+/* Presence action buttons — large touch targets */
+.presence-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:12px 0;}
+.presence-actions .btn{padding:12px 8px;font-size:13px;text-align:center;}
+
+/* ── CARDS ───────────────────────────────────── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;margin-bottom:10px;}
+.card:last-child{margin-bottom:0;}
+
+/* ── SECTION HEADER ─────────────────────────── */
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.section-title{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:.05em;}
+
+/* ── PROFILES ────────────────────────────────── */
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.player-search-wrap{position:relative;margin-bottom:12px;}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none;}
+.player-search-input{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px 10px 32px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;}
+.player-search-input:focus{border-color:var(--accent);}
+.player-search-input::placeholder{color:var(--text3);}
+
+.player-row{display:flex;align-items:center;gap:10px;}
+.player-row-info{flex:1;min-width:0;}
+.player-row-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.player-row-sub{font-size:11px;color:var(--text3);}
+.role-pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+.role-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;}
+
+/* ── EVENT ───────────────────────────────────── */
+.event-banner{background:linear-gradient(135deg,#1a1f30,#1e2738);border:1px solid var(--border2);border-radius:var(--r2);padding:16px;margin-bottom:14px;}
+.event-banner-title{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;}
+.event-banner-sub{font-size:12px;color:var(--text2);margin-top:3px;}
+
+.presence-bar-title{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--text2);text-transform:uppercase;margin-bottom:8px;}
+.presence-list{display:flex;flex-wrap:wrap;gap:6px;}
+.presence-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);font-size:12px;color:var(--text2);cursor:pointer;touch-action:manipulation;}
 .chip-flag{cursor:pointer;font-size:10px;opacity:.4;margin-left:2px;transition:opacity .1s;}
-.chip-flag:hover{opacity:1;}
-.chip-flag.on{opacity:1;color:#f0c040;}
-.comp-zone{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
+.chip-flag:hover,.chip-flag.on{opacity:1;}
+.chip-flag.on{color:#f0c040;}
+
+/* Comp zone — single column on mobile */
+.comp-zone{display:flex;flex-direction:column;gap:10px;}
 .role-block{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;}
 .role-block-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
 .role-block-label{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
-.player-slot{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;margin-bottom:3px;font-size:13px;}
+.player-slot{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-size:13px;}
 .player-slot:hover{background:var(--bg3);}
-.slot-weapon{font-family:'IBM Plex Mono',monospace;font-size:11px;}
-.empty-slot{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;border:1px dashed var(--border2);font-size:12px;color:var(--text3);cursor:pointer;margin-bottom:3px;transition:all .12s;}
-.empty-slot:hover{border-color:var(--accent);color:var(--accent);background:rgba(88,101,242,.05);}
-.temp-section{margin-top:20px;padding-top:16px;border-top:1px dashed var(--border2);}
-.temp-section-title{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:10px;}
-.temp-role-block{background:var(--bg2);border:1px dashed var(--border2);border-radius:var(--r2);padding:12px;margin-bottom:8px;}
-.temp-role-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.temp-name-input{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:5px 10px;color:var(--text);font-family:'Rajdhani',sans-serif;font-weight:600;font-size:14px;letter-spacing:.04em;outline:none;}
-.temp-name-input:focus{border-color:var(--accent);}
+.slot-weapon{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-left:auto;}
+.empty-slot{display:flex;align-items:center;gap:6px;padding:10px 8px;border-radius:6px;border:1px dashed var(--border2);font-size:13px;color:var(--text3);cursor:pointer;margin-bottom:3px;transition:all .12s;touch-action:manipulation;}
+.empty-slot:active{border-color:var(--accent);color:var(--accent);background:rgba(88,101,242,.05);}
+
+/* ── COMP EDITOR ─────────────────────────────── */
+.comp-tabs-scroll{overflow-x:auto;display:flex;gap:6px;padding-bottom:8px;margin-bottom:10px;scrollbar-width:none;}
+.comp-tabs-scroll::-webkit-scrollbar{display:none;}
 .comp-class-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:12px;margin-bottom:10px;}
 .comp-class-title{font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:13px;margin-bottom:8px;}
-.comp-roles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;}
-.comp-role-card{display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--bg3);border-radius:var(--r);width:100%;}
-.comp-role-label{font-size:13px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.comp-role-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.comp-role-row:last-child{border-bottom:none;padding-bottom:0;}
+.comp-role-label{flex:1;font-size:13px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .qty-pill{display:inline-flex;align-items:center;border-radius:20px;border:1px solid var(--border2);overflow:hidden;background:var(--bg4);flex-shrink:0;}
-.qty-pill button{width:22px;height:22px;border:none;background:transparent;color:var(--text2);cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .1s;}
-.qty-pill button:hover{background:var(--bg3);color:var(--text);}
-.qty-pill button.dec:hover{color:#f04747;}
-.qty-pill button.inc:hover{color:#3ddc84;}
-.qty-pill .qty-val{min-width:22px;text-align:center;font-size:12px;font-weight:700;color:var(--text);padding:0 2px;}
-.max-toggle{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);cursor:pointer;flex-shrink:0;}
-.max-toggle input{cursor:pointer;accent-color:var(--accent);}
+.qty-pill button{width:30px;height:30px;border:none;background:transparent;color:var(--text2);cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .1s;touch-action:manipulation;}
+.qty-pill button:active{background:var(--bg3);}
+.qty-pill button.dec:active{color:#f04747;}
+.qty-pill button.inc:active{color:#3ddc84;}
+.qty-pill .qty-val{min-width:28px;text-align:center;font-size:14px;font-weight:700;color:var(--text);padding:0 2px;}
+.max-toggle{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);cursor:pointer;flex-shrink:0;touch-action:manipulation;}
+.max-toggle input{cursor:pointer;accent-color:var(--accent);width:14px;height:14px;}
 .max-toggle.on{color:#f04747;}
-.cls-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border-radius:var(--r);margin-bottom:6px;cursor:grab;user-select:none;transition:opacity .15s,box-shadow .15s;}
-.role-row-editor{display:flex;align-items:center;gap:10px;padding:7px 12px;background:var(--bg3);border-radius:var(--r);margin-bottom:5px;cursor:grab;user-select:none;transition:opacity .15s,box-shadow .15s;}
+.hidden-badge{font-size:9px;padding:1px 6px;border-radius:10px;background:rgba(180,120,240,.2);color:#b478f0;border:1px solid rgba(180,120,240,.35);margin-left:4px;vertical-align:middle;}
+
+/* ── CLASSES & ROLES ─────────────────────────── */
+.cls-row,.role-row-editor{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg3);border-radius:var(--r);margin-bottom:6px;cursor:grab;user-select:none;transition:opacity .15s,box-shadow .15s;}
 .cls-row.dragging,.role-row-editor.dragging{opacity:.4;cursor:grabbing;}
 .cls-row.drag-over,.role-row-editor.drag-over{box-shadow:0 -2px 0 var(--accent);}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:1000;}
+.section-col-title{font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:.05em;color:var(--text2);font-size:13px;text-transform:uppercase;margin-bottom:8px;}
+input[type=color]{width:34px;height:30px;border:1px solid var(--border2);border-radius:4px;padding:0;cursor:pointer;background:none;}
+
+/* ── MODALS ──────────────────────────────────── */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:flex-end;justify-content:center;z-index:1000;}
 .modal.open{display:flex;}
-.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:20px;width:400px;max-width:95vw;max-height:85vh;overflow-y:auto;}
-.modal-title{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;letter-spacing:.05em;margin-bottom:12px;}
-.modal-player-opt{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r);cursor:pointer;border:1px solid transparent;transition:all .1s;margin-bottom:4px;}
-.modal-player-opt:hover{background:var(--bg3);border-color:var(--border);}
+
+/* Sheet style on mobile */
+.modal-box{
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:20px 20px 0 0;
+  padding:20px 20px calc(20px + var(--safe-bottom));
+  width:100%;max-width:560px;
+  max-height:88dvh;overflow-y:auto;
+}
+.modal-handle{width:40px;height:4px;border-radius:2px;background:var(--border2);margin:0 auto 16px;}
+.modal-title{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;letter-spacing:.05em;margin-bottom:12px;}
+.modal-player-opt{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--r);cursor:pointer;border:1px solid transparent;transition:all .1s;margin-bottom:4px;}
+.modal-player-opt:active{background:var(--bg3);}
 .modal-player-opt.selected{background:rgba(88,101,242,.1);border-color:var(--accent);}
 .modal-player-opt.dimmed{opacity:.4;pointer-events:none;}
 .modal-player-opt.used{opacity:.65;}
 .modal-player-opt.me-first{border-color:rgba(255,255,255,0.25);background:rgba(255,255,255,0.04);}
-.weapon-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 12px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;}
-.weapon-input:focus{border-color:var(--accent);}
-.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
-.section-title{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:.05em;}
-.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
-#modal-assign{position:fixed;display:none;background:var(--bg2);z-index:1000;border-radius:var(--r2);padding:16px;width:380px;box-shadow:0 10px 40px rgba(0,0,0,.7);border:1px solid var(--border2);}
-.modal-search{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:7px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;margin-bottom:8px;}
+.modal-search{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;margin-bottom:8px;}
 .modal-search:focus{border-color:var(--accent);}
 .assign-group-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:6px 10px 3px;}
-input[type=color]{width:38px;height:28px;border:1px solid var(--border2);border-radius:4px;padding:0;cursor:pointer;background:none;}
-::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
-.loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;letter-spacing:.05em;color:var(--text2);}
-.loading.hidden{display:none;}
-.player-roles-popup{position:fixed;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:12px;z-index:2000;box-shadow:0 8px 32px rgba(0,0,0,.6);min-width:180px;max-width:280px;}
-.comp-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;font-size:12px;color:var(--text2);}
-.comp-badge-name{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;color:var(--text);letter-spacing:.04em;}
-.identity-banner{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--r2);margin-bottom:12px;font-size:12px;}
+
+/* Floating assign → sheet on mobile */
+#modal-assign{
+  position:fixed;inset:0;background:rgba(0,0,0,.8);
+  display:none;align-items:flex-end;justify-content:center;z-index:1000;
+}
+#modal-assign-inner{
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:20px 20px 0 0;
+  padding:20px 20px calc(20px + var(--safe-bottom));
+  width:100%;max-width:560px;
+  max-height:85dvh;
+  display:flex;flex-direction:column;
+}
+#modal-assign-body{overflow-y:auto;flex:1;}
+.modal-section-sep{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin:14px 0 8px;}
+
+/* weapon input */
+.weapon-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:14px;outline:none;}
+.weapon-input:focus{border-color:var(--accent);}
+
+/* identity banner */
+.identity-banner{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--r2);margin-bottom:12px;font-size:12px;}
 .identity-banner.linked{background:rgba(61,220,132,.06);border:1px solid rgba(61,220,132,.3);color:#3ddc84;}
 .identity-banner.unlinked{background:rgba(240,192,64,.06);border:1px solid rgba(240,192,64,.3);color:#f0c040;cursor:pointer;}
-.identity-banner.unlinked:hover{background:rgba(240,192,64,.12);}
-.hidden-badge{font-size:9px;padding:1px 6px;border-radius:10px;background:rgba(180,120,240,.2);color:#b478f0;border:1px solid rgba(180,120,240,.35);margin-left:4px;vertical-align:middle;}
-body.render-mode .sidebar,body.render-mode .channel-header,body.render-mode [onclick="addTempRole()"],body.render-mode .btn-danger,body.render-mode .empty-slot,body.render-mode .chip-flag{display:none!important;}
-body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body.render-mode .content{max-width:100%;}
+.identity-banner.unlinked:active{background:rgba(240,192,64,.12);}
 
-/* Champ de recherche joueurs */
-.player-search-wrap{position:relative;margin-bottom:14px;max-width:320px;}
-.player-search-wrap .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none;}
-.player-search-input{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:7px 12px 7px 30px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;transition:border-color .12s;}
-.player-search-input:focus{border-color:var(--accent);}
-.player-search-input::placeholder{color:var(--text3);}
+/* temp roles */
+.temp-section{margin-top:20px;padding-top:16px;border-top:1px dashed var(--border2);}
+.temp-section-title{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:10px;}
+.temp-role-block{background:var(--bg2);border:1px dashed var(--border2);border-radius:var(--r2);padding:12px;margin-bottom:8px;}
+.temp-role-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.temp-name-input{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;color:var(--text);font-family:'Rajdhani',sans-serif;font-weight:600;font-size:14px;letter-spacing:.04em;outline:none;}
+.temp-name-input:focus{border-color:var(--accent);}
 
-/* Séparateur dans modale édition */
-.modal-section-sep{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin:14px 0 8px;}
+/* comp badge */
+.comp-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;font-size:12px;color:var(--text2);}
+.comp-badge-name{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;color:var(--text);letter-spacing:.04em;}
+
+/* player roles popup → replaced by modal on mobile */
+.player-roles-popup{position:fixed;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:12px;z-index:2000;box-shadow:0 8px 32px rgba(0,0,0,.6);min-width:180px;max-width:280px;}
+
+/* Loading */
+.loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;letter-spacing:.05em;color:var(--text2);}
+.loading.hidden{display:none;}
+
+/* render mode */
+body.render-mode .top-bar,body.render-mode .bottom-nav,body.render-mode [onclick="addTempRole()"],body.render-mode .btn-danger,body.render-mode .empty-slot,body.render-mode .chip-flag{display:none!important;}
+
+/* scrollbar */
+::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+
+/* ── DESKTOP LAYOUT (≥640px) ─────────────────── */
+@media (min-width: 640px) {
+  .app{flex-direction:row;height:100vh;}
+
+  /* restore sidebar */
+  .sidebar{
+    display:flex;flex-direction:column;
+    width:220px;background:var(--bg2);border-right:1px solid var(--border);
+    flex-shrink:0;height:100%;
+  }
+  .sidebar-header{padding:16px;border-bottom:1px solid var(--border);}
+  .guild-name{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;}
+  .sidebar-label{font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:10px 16px 4px;}
+  .nav-item{display:flex;align-items:center;gap:8px;padding:8px 16px;cursor:pointer;border-radius:4px;margin:0 6px;color:var(--text2);font-size:14px;transition:all .12s;}
+  .nav-item:hover{background:var(--bg3);color:var(--text);}
+  .nav-item.active{background:var(--bg4);color:var(--text);}
+  .nav-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .sidebar-bottom{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+
+  /* hide mobile chrome */
+  .top-bar{display:none;}
+  .bottom-nav{display:none;}
+
+  /* main area */
+  .main-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .channel-header{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
+  .channel-name{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;letter-spacing:.04em;}
+
+  .pages{flex:1;overflow:hidden;}
+  .page{padding:20px;padding-bottom:20px;max-width:980px;}
+
+  /* comp zone 2-col on desktop */
+  .comp-zone{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
+
+  /* modal as centered dialog on desktop */
+  .modal{align-items:center;}
+  .modal-box{border-radius:var(--r2);max-width:420px;padding:20px;}
+  .modal-handle{display:none;}
+
+  #modal-assign{align-items:center;}
+  #modal-assign-inner{border-radius:var(--r2);max-width:400px;max-height:80vh;padding:16px;}
+}
 </style>
 </head>
 <body>
 <div class="loading" id="loading">⚔️ Chargement...</div>
+
 <div class="app" style="display:none" id="app">
-  <div class="sidebar">
-    <div class="sidebar-header"><div class="guild-name"><div class="guild-icon">AG</div>Albion Guild</div></div>
+
+  <!-- ── SIDEBAR (desktop only) ── -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="guild-name"><div class="guild-icon">AG</div>Albion Guild</div>
+    </div>
     <div class="sidebar-label">📋 Gestion</div>
     <div class="nav-item active" onclick="showView('profiles')" id="nav-profiles"><div class="nav-dot" style="background:#5865F2"></div>Profils joueurs</div>
     <div class="nav-item" onclick="showView('event')" id="nav-event"><div class="nav-dot" style="background:#3ddc84"></div>Événement actif</div>
     <div class="nav-item" onclick="showView('comps')" id="nav-comps"><div class="nav-dot" style="background:#f0c040"></div>Éditeur comp</div>
     <div class="nav-item" onclick="showView('classes')" id="nav-classes"><div class="nav-dot" style="background:#b478f0"></div>Classes & Rôles</div>
     <div class="sidebar-bottom">
-      <div class="user-avatar" id="sidebar-avatar" onclick="openIdentityModal()" title="Définir mon identité">?</div>
+      <div class="user-avatar avatar-btn" id="sidebar-avatar" onclick="openIdentityModal()" title="Mon identité">?</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="sidebar-name">Non identifié</div>
-        <div style="font-size:11px;color:var(--text3);" id="sidebar-status">Cliquez pour vous identifier</div>
+        <div style="font-size:11px;color:var(--text3);" id="sidebar-status">Cliquez pour s'identifier</div>
       </div>
     </div>
   </div>
-  <div class="main">
-    <div class="channel-header"><span id="ch-icon">👤</span><span class="channel-name" id="ch-name">profils-joueurs</span></div>
-    <div class="content">
 
-      <div class="view active" id="view-profiles">
-        <div class="section-head"><div class="section-title">Profils joueurs</div><button class="btn btn-primary btn-sm" onclick="openAddPlayer()">+ Ajouter</button></div>
-        <!-- Barre de recherche -->
+  <!-- ── MAIN WRAP ── -->
+  <div class="main-wrap" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+
+    <!-- Top bar (mobile) -->
+    <div class="top-bar">
+      <div class="guild-icon">AG</div>
+      <div style="flex:1;">
+        <div class="top-title" id="mob-title">Profils joueurs</div>
+      </div>
+      <button class="avatar-btn" id="mob-avatar" onclick="openIdentityModal()">?</button>
+    </div>
+
+    <!-- Channel header (desktop) -->
+    <div class="channel-header">
+      <span id="ch-icon">👤</span>
+      <span class="channel-name" id="ch-name">profils-joueurs</span>
+    </div>
+
+    <!-- Pages -->
+    <div class="pages">
+
+      <!-- PROFILES -->
+      <div class="page active" id="view-profiles">
+        <div class="section-head">
+          <div class="section-title">Profils joueurs</div>
+          <button class="btn btn-primary btn-sm" onclick="openAddPlayer()">+ Ajouter</button>
+        </div>
         <div class="player-search-wrap">
           <span class="search-icon">🔍</span>
-          <input id="player-search" class="player-search-input" placeholder="Rechercher un joueur..." oninput="filterPlayersByName(this.value)">
+          <input id="player-search" class="player-search-input" placeholder="Rechercher..." oninput="filterPlayersByName(this.value)">
         </div>
         <div class="filter-row" id="filter-row"></div>
-        <div class="player-grid" id="player-grid"></div>
+        <div id="player-grid"></div>
       </div>
 
-      <div class="view" id="view-event">
+      <!-- EVENT -->
+      <div class="page" id="view-event">
         <div id="identity-banner-el"></div>
-        <div id="event-banner" style="background:linear-gradient(135deg,#1a1f30,#1e2738);border:1px solid var(--border2);border-radius:var(--r2);padding:20px;margin-bottom:16px;">
-          <div style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;" id="event-title">⚔️ Événement</div>
-          <div style="font-size:13px;color:var(--text2);margin-top:4px;" id="event-subtitle"><span id="present-count">0 présents</span></div>
-          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-success btn-sm" onclick="setMyPresence('present')">✓ Je suis là</button>
-            <button class="btn btn-warning btn-sm" onclick="setMyPresence('maybe')">? Peut-être</button>
-            <button class="btn btn-danger btn-sm" onclick="setMyPresence('absent')">✕ Absent</button>
+        <div class="event-banner">
+          <div class="event-banner-title" id="event-title">⚔️ Événement</div>
+          <div class="event-banner-sub" id="event-subtitle"><span id="present-count">0 présents</span></div>
+          <div class="presence-actions">
+            <button class="btn btn-success" onclick="setMyPresence('present')">✓ Je suis là</button>
+            <button class="btn btn-warning" onclick="setMyPresence('maybe')">? Peut-être</button>
+            <button class="btn btn-danger" onclick="setMyPresence('absent')">✕ Absent</button>
           </div>
         </div>
-        <div class="presence-bar">
-          <div class="presence-bar-title">Présences <span style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;">— cliquez sur un nom pour voir ses rôles · ⚑ pour marquer un doute</span></div>
-          <div id="presence-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+        <div class="card">
+          <div class="presence-bar-title">Présences <span style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;">— tap pour voir les rôles · ⚑ pour douter</span></div>
+          <div id="presence-list" class="presence-list"></div>
         </div>
-        <div class="section-head" style="margin-top:4px;">
+        <div class="section-head" style="margin-top:16px;">
           <div class="section-title">Composition</div>
-          <div style="display:flex;gap:8px;align-items:center;"><div id="event-comp-info"></div><button class="btn btn-sm" onclick="addTempRole()">+ Rôle temp.</button></div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div id="event-comp-info"></div>
+            <button class="btn btn-sm" onclick="addTempRole()">+ Rôle temp.</button>
+          </div>
         </div>
         <div id="comp-zone" class="comp-zone"></div>
         <div id="temp-zone"></div>
       </div>
 
-      <div class="view" id="view-comps">
+      <!-- COMP EDITOR -->
+      <div class="page" id="view-comps">
         <div class="section-head">
-          <div class="section-title">Éditeur de composition</div>
+          <div class="section-title">Éditeur comp</div>
           <div style="display:flex;gap:6px;">
-            <button class="btn btn-primary btn-sm" onclick="saveComp()">💾 Sauvegarder</button>
-            <button class="btn btn-sm" onclick="newComp()">+ Nouvelle</button>
+            <button class="btn btn-primary btn-sm" onclick="saveComp()">💾 Sauver</button>
+            <button class="btn btn-sm" onclick="newComp()">+</button>
             <button class="btn btn-danger btn-sm" onclick="deleteCurrentComp()">🗑</button>
           </div>
         </div>
-        <div id="comp-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
-        <input id="comp-name-input" class="weapon-input" placeholder="Nom de la composition" style="max-width:300px;margin-bottom:14px;">
+        <div class="comp-tabs-scroll" id="comp-tabs"></div>
+        <input id="comp-name-input" class="weapon-input" placeholder="Nom de la composition" style="margin-bottom:14px;">
         <div id="comp-editor"></div>
       </div>
 
-      <div class="view" id="view-classes">
-        <div class="section-head"><div class="section-title">Classes & Rôles</div><span style="font-size:11px;color:var(--text3);">Glissez pour réordonner — sauvegarde automatique</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-          <div>
-            <div style="font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:.05em;color:var(--text2);font-size:13px;text-transform:uppercase;margin-bottom:8px;">Classes</div>
-            <div id="classes-list"></div>
-            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-              <input id="new-class-name" class="weapon-input" placeholder="Nouvelle classe" style="flex:1;min-width:120px;">
-              <input type="color" id="new-class-color" value="#aaaaaa">
-              <button class="btn btn-sm btn-primary" onclick="addClass()">+ Ajouter</button>
-            </div>
+      <!-- CLASSES & ROLES -->
+      <div class="page" id="view-classes">
+        <div class="section-head">
+          <div class="section-title">Classes & Rôles</div>
+          <span style="font-size:11px;color:var(--text3);">Glissez pour réordonner</span>
+        </div>
+        <!-- Classes -->
+        <div style="margin-bottom:20px;">
+          <div class="section-col-title">Classes</div>
+          <div id="classes-list"></div>
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+            <input id="new-class-name" class="weapon-input" placeholder="Nouvelle classe" style="flex:1;min-width:120px;">
+            <input type="color" id="new-class-color" value="#aaaaaa">
+            <button class="btn btn-sm btn-primary" onclick="addClass()">+ Ajouter</button>
           </div>
-          <div>
-            <div style="font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:.05em;color:var(--text2);font-size:13px;text-transform:uppercase;margin-bottom:8px;">Rôles</div>
-            <div id="roles-list"></div>
-            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-              <input id="new-role-name" class="weapon-input" placeholder="Nom du rôle" style="flex:1;min-width:120px;">
-              <select id="new-role-class" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:6px 8px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;"></select>
-              <button class="btn btn-sm btn-primary" onclick="addRole()">+ Ajouter</button>
-            </div>
+        </div>
+        <!-- Roles -->
+        <div>
+          <div class="section-col-title">Rôles</div>
+          <div id="roles-list"></div>
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+            <input id="new-role-name" class="weapon-input" placeholder="Nom du rôle" style="flex:1;min-width:120px;">
+            <select id="new-role-class" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;"></select>
+            <button class="btn btn-sm btn-primary" onclick="addRole()">+ Ajouter</button>
           </div>
         </div>
       </div>
 
-    </div>
+    </div><!-- /pages -->
+
+    <!-- Bottom nav (mobile) -->
+    <nav class="bottom-nav">
+      <button class="nav-tab active" data-view="profiles" onclick="showView('profiles')">
+        <div class="tab-dot"></div>
+        <span class="tab-icon">👤</span>
+        <span>Profils</span>
+      </button>
+      <button class="nav-tab" data-view="event" onclick="showView('event')">
+        <div class="tab-dot"></div>
+        <span class="tab-icon">⚔️</span>
+        <span>Événement</span>
+      </button>
+      <button class="nav-tab" data-view="comps" onclick="showView('comps')">
+        <div class="tab-dot"></div>
+        <span class="tab-icon">🛠️</span>
+        <span>Comp</span>
+      </button>
+      <button class="nav-tab" data-view="classes" onclick="showView('classes')">
+        <div class="tab-dot"></div>
+        <span class="tab-icon">🎨</span>
+        <span>Classes</span>
+      </button>
+    </nav>
+
+  </div><!-- /main-wrap -->
+</div><!-- /app -->
+
+<!-- Floating assign (sheet on mobile) -->
+<div id="modal-assign" onclick="handleAssignBackdrop(event)">
+  <div id="modal-assign-inner">
+    <div class="modal-handle"></div>
+    <div id="modal-assign-body"></div>
   </div>
 </div>
 
-<div id="modal-assign"></div>
-
+<!-- Identity modal -->
 <div id="modal-identity" class="modal">
   <div class="modal-box">
+    <div class="modal-handle"></div>
     <div class="modal-title">🎮 Mon identité</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Sélectionnez votre profil pour indiquer vos présences depuis la web app.</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Sélectionnez votre profil pour indiquer vos présences.</div>
     <input class="modal-search" id="identity-search" placeholder="🔍 Rechercher un joueur..." oninput="filterIdentityList(this.value)">
-    <div id="identity-player-list" style="max-height:320px;overflow-y:auto;margin-bottom:12px;"></div>
+    <div id="identity-player-list" style="max-height:340px;overflow-y:auto;margin-bottom:12px;"></div>
     <div style="display:flex;gap:8px;justify-content:space-between;">
       <button class="btn btn-danger btn-sm" onclick="clearIdentity()">Se déconnecter</button>
       <button class="btn btn-sm" onclick="closeIdentityModal()">Fermer</button>
@@ -242,12 +458,14 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
   </div>
 </div>
 
+<!-- Add player modal -->
 <div id="modal-player" class="modal">
   <div class="modal-box">
+    <div class="modal-handle"></div>
     <div class="modal-title">Nouveau joueur</div>
     <input id="new-name" class="weapon-input" placeholder="Pseudo ingame" style="margin-bottom:8px;">
     <input id="new-discord-id" class="weapon-input" placeholder="Discord ID (ex: 123456789)" style="margin-bottom:12px;">
-    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Rôles disponibles :</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Rôles :</div>
     <div id="new-roles" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
       <button class="btn btn-sm" onclick="closeAddModal()">Annuler</button>
@@ -256,20 +474,18 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
   </div>
 </div>
 
-<!-- Modale édition joueur — avec nom, discord ID et rôles -->
+<!-- Edit player modal -->
 <div id="modal-edit-player" class="modal">
   <div class="modal-box">
+    <div class="modal-handle"></div>
     <div class="modal-title">Modifier — <span id="edit-player-name"></span></div>
-
     <div class="modal-section-sep">Informations</div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:4px;">
       <input id="edit-name-input" class="weapon-input" placeholder="Pseudo ingame">
-      <input id="edit-discord-input" class="weapon-input" placeholder="Discord ID (ex: 123456789)">
+      <input id="edit-discord-input" class="weapon-input" placeholder="Discord ID">
     </div>
-
     <div class="modal-section-sep">Rôles</div>
     <div id="edit-roles-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;"></div>
-
     <div style="display:flex;gap:8px;justify-content:flex-end;">
       <button class="btn btn-sm" onclick="closeEditModal()">Annuler</button>
       <button class="btn btn-primary btn-sm" onclick="savePlayerRoles()">Enregistrer</button>
@@ -288,11 +504,10 @@ let currentComp=null,editingComp=null,editCompIdx=0,editingPlayerId=null;
 let newSelected=[],currentFilter='alpha';
 let pendingRoleId=null,pendingPlayerId=null,pendingIsTemp=false,pendingTempId=null;
 let currentEventId=null;
-
-// IDENTITE
 let myDiscordId=localStorage.getItem('myDiscordId')||null;
 let myPlayer=null;
 
+// ── IDENTITY ──────────────────────────────────
 function resolveMyPlayer(){
   const params=new URLSearchParams(window.location.search);
   const urlId=params.get('discord_id');
@@ -302,8 +517,17 @@ function resolveMyPlayer(){
 }
 function renderSidebarIdentity(){
   const av=document.getElementById('sidebar-avatar'),nm=document.getElementById('sidebar-name'),st=document.getElementById('sidebar-status');
-  if(myPlayer){av.textContent=getInitials(myPlayer.name);av.style.background=myPlayer.color||'var(--accent)';nm.textContent=myPlayer.name;st.textContent='🟢 Identifié';st.style.color='#3ddc84';}
-  else{av.textContent='?';av.style.background='var(--accent)';nm.textContent='Non identifié';st.textContent='Cliquez pour vous identifier';st.style.color='var(--text3)';}
+  const mob=document.getElementById('mob-avatar');
+  if(myPlayer){
+    const ini=getInitials(myPlayer.name);const col=myPlayer.color||'var(--accent)';
+    av.textContent=ini;av.style.background=col;
+    nm.textContent=myPlayer.name;st.textContent='🟢 Identifié';st.style.color='#3ddc84';
+    if(mob){mob.textContent=ini;mob.style.background=col;}
+  }else{
+    av.textContent='?';av.style.background='var(--accent)';
+    nm.textContent='Non identifié';st.textContent='Cliquez pour s\'identifier';st.style.color='var(--text3)';
+    if(mob){mob.textContent='?';mob.style.background='var(--accent)';}
+  }
 }
 function renderIdentityBanner(){
   const el=document.getElementById('identity-banner-el');if(!el)return;
@@ -312,14 +536,14 @@ function renderIdentityBanner(){
     const stTxt=st==='present'?'🟢 Présent':st==='maybe'?'🟡 Peut-être':st==='absent'?'❌ Absent':'⚫ Non renseigné';
     el.innerHTML=`<div class="identity-banner linked">${avatarEl(myPlayer.name,myPlayer.color||'#5865F2',22)}<span style="color:var(--text);font-weight:500;">${myPlayer.name}</span><span style="margin-left:4px;font-size:11px;">${stTxt}</span><span style="margin-left:auto;font-size:11px;opacity:.5;cursor:pointer;" onclick="openIdentityModal()">Changer</span></div>`;
   }else{
-    el.innerHTML=`<div class="identity-banner unlinked" onclick="openIdentityModal()"><span>⚠️</span><span>Vous n'êtes pas identifié — <u>cliquez ici</u> pour indiquer vos présences.</span></div>`;
+    el.innerHTML=`<div class="identity-banner unlinked" onclick="openIdentityModal()"><span>⚠️</span><span>Vous n'êtes pas identifié — <u>tapez ici</u>.</span></div>`;
   }
 }
 function openIdentityModal(){
   document.getElementById('identity-search').value='';
   renderIdentityPlayerList('');
   document.getElementById('modal-identity').classList.add('open');
-  setTimeout(()=>document.getElementById('identity-search').focus(),50);
+  setTimeout(()=>document.getElementById('identity-search').focus(),100);
 }
 function renderIdentityPlayerList(query){
   const q=query.toLowerCase().trim();
@@ -327,8 +551,8 @@ function renderIdentityPlayerList(query){
   document.getElementById('identity-player-list').innerHTML=list.map(p=>`
     <div class="modal-player-opt ${myDiscordId===p.discord_id?'selected':''}" onclick="selectIdentity('${p.discord_id}')">
       ${avatarEl(p.name,p.color||'#5865F2',28)}
-      <div style="flex:1;"><div style="font-weight:500;">${p.name}</div><div style="font-size:11px;color:var(--text3);">${p.discord_id?'🔗 '+p.discord_id:'pas de discord ID'}</div></div>
-      ${myDiscordId===p.discord_id?'<span style="font-size:11px;color:#3ddc84;font-weight:600;">✓ Moi</span>':''}
+      <div style="flex:1;"><div style="font-weight:500;">${p.name}</div><div style="font-size:11px;color:var(--text3);">${p.discord_id?'🔗 '+p.discord_id.slice(0,8)+'…':'pas de discord ID'}</div></div>
+      ${myDiscordId===p.discord_id?'<span style="font-size:11px;color:#3ddc84;font-weight:600;">✓</span>':''}
     </div>`).join('')||'<div style="color:var(--text3);padding:12px;font-size:12px;">Aucun joueur trouvé</div>';
 }
 function filterIdentityList(q){renderIdentityPlayerList(q);}
@@ -340,7 +564,7 @@ function selectIdentity(discordId){
 function clearIdentity(){myDiscordId=null;myPlayer=null;localStorage.removeItem('myDiscordId');closeIdentityModal();renderSidebarIdentity();renderIdentityBanner();}
 function closeIdentityModal(){document.getElementById('modal-identity').classList.remove('open');}
 
-// INIT
+// ── INIT ──────────────────────────────────────
 async function init(){
   const params=new URLSearchParams(window.location.search);
   currentEventId=params.get('event_id')?parseInt(params.get('event_id')):null;
@@ -381,19 +605,18 @@ async function loadEventData(eventId){
 }
 function renderEventCompBadge(compId){
   const el=document.getElementById('event-comp-info');if(!el)return;
-  if(!compId){el.innerHTML='<span style="font-size:12px;color:var(--text3);">Aucune comp liée</span>';return;}
+  if(!compId){el.innerHTML='<span style="font-size:12px;color:var(--text3);">Aucune comp</span>';return;}
   const comp=comps.find(c=>c.id===compId);
-  el.innerHTML=comp?`<div class="comp-badge">🗂 Comp : <span class="comp-badge-name">${comp.name}</span></div>`:'<span style="font-size:12px;color:var(--text3);">Comp introuvable</span>';
+  el.innerHTML=comp?`<div class="comp-badge">🗂 <span class="comp-badge-name">${comp.name}</span></div>`:'';
 }
 
-// HELPERS
+// ── HELPERS ───────────────────────────────────
 function getInitials(n){return n.slice(0,2).toUpperCase();}
 function roleDef(id){return ROLES_DEF.find(r=>r.id===id);}
 function classDef(id){return CLASSES_DEF.find(c=>c.id===id);}
 function avatarEl(name,color,size=34){return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color}22;color:${color};display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:${Math.round(size*.38)}px;flex-shrink:0;">${getInitials(name)}</div>`;}
 function visibleSlots(rid){const slotDef=currentComp?.slots?.[rid];const count=slotDef?slotDef.count:0;const strict=slotDef?slotDef.strict:false;const assigned=(assignments[rid]||[]).length;if(strict)return count;return Math.max(count,assigned+1);}
 function getAssignedRole(pid){for(const[rid,arr]of Object.entries(assignments)){if(arr.some(a=>a.playerId===pid))return roleDef(rid);}return null;}
-
 function presenceStatusText(discordId){
   const s=presence[discordId]||'none';
   if(s==='present')return{ico:'🟢',txt:'Disponible',color:'#3ddc84'};
@@ -402,99 +625,84 @@ function presenceStatusText(discordId){
   return{ico:'⚫',txt:'?',color:'var(--text3)'};
 }
 
-// NAVIGATION
+// ── NAVIGATION ────────────────────────────────
 const CH_META={profiles:['👤','profils-joueurs'],event:['⚔️','événement-actif'],comps:['🛠️','éditeur-comp'],classes:['🎨','classes-rôles']};
+const MOB_TITLES={profiles:'Profils joueurs',event:'Événement actif',comps:'Éditeur comp',classes:'Classes & Rôles'};
 function showView(v){
-  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(n=>n.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
-  document.getElementById('nav-'+v).classList.add('active');
+  const ni=document.getElementById('nav-'+v);if(ni)ni.classList.add('active');
+  document.querySelectorAll('.nav-tab[data-view="'+v+'"]').forEach(t=>t.classList.add('active'));
   const[ico,name]=CH_META[v]||['📋',v];
-  document.getElementById('ch-icon').textContent=ico;document.getElementById('ch-name').textContent=name;
-  if(v==='profiles')renderProfiles();if(v==='event')renderEvent();if(v==='comps')renderCompEditor();if(v==='classes')renderClassesEditor();
+  document.getElementById('ch-icon').textContent=ico;
+  document.getElementById('ch-name').textContent=name;
+  const mob=document.getElementById('mob-title');if(mob)mob.textContent=MOB_TITLES[v]||name;
+  if(v==='profiles')renderProfiles();
+  if(v==='event')renderEvent();
+  if(v==='comps')renderCompEditor();
+  if(v==='classes')renderClassesEditor();
 }
 
-// PROFILES
+// ── PROFILES ──────────────────────────────────
 function buildFilterRow(){
   const filters=[{id:'alpha',label:'A–Z',color:null},...CLASSES_DEF.map(c=>({id:c.id,label:c.label,color:c.color}))];
   document.getElementById('filter-row').innerHTML=filters.map(f=>`<button class="btn btn-sm ${currentFilter===f.id?'active':''}" style="${f.color&&currentFilter!==f.id?'color:'+f.color:''}" onclick="filterPlayers('${f.id}')">${f.label}</button>`).join('');
 }
-
 function renderProfiles(){
-  // Réinitialise la barre de recherche
-  const ps=document.getElementById('player-search');
-  if(ps) ps.value='';
-
+  const ps=document.getElementById('player-search');if(ps)ps.value='';
   buildFilterRow();
   let list=[...players];
   if(currentFilter==='alpha')list.sort((a,b)=>a.name.localeCompare(b.name));
   else list=list.filter(p=>p.roles.some(rid=>(roleDef(rid)||{}).cls===currentFilter));
   document.getElementById('player-grid').innerHTML=list.map(p=>`
-    <div class="player-card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+    <div class="card" style="margin-bottom:8px;">
+      <div class="player-row">
         ${avatarEl(p.name,p.color||'#5865F2')}
-        <div style="flex:1;"><div style="font-weight:500">${p.name}</div><div style="font-size:11px;color:var(--text3)">${p.discord_id?'🔗 '+p.discord_id.slice(0,8)+'...':'pas de discord ID'}</div></div>
-        <button class="btn btn-icon" onclick="editPlayerRoles(${p.id})">⚙️</button>
+        <div class="player-row-info">
+          <div class="player-row-name">${p.name}</div>
+          <div class="player-row-sub">${p.discord_id?'🔗 '+p.discord_id.slice(0,10)+'…':'pas de discord ID'}</div>
+        </div>
+        <button class="btn btn-icon" onclick="editPlayerRoles(${p.id})" style="margin-left:auto;">⚙️</button>
         <button class="btn btn-icon btn-danger" onclick="deletePlayer(${p.id})">✕</button>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;">
-        ${p.roles.map(rid=>{const r=roleDef(rid);
-          if(!r||r.is_hidden)return'';
-          return `<span class="role-pill" style="background:${r.color}18;color:${r.color};">${r.label}</span>`;
-        }).join('')}
+      <div class="role-pills">
+        ${p.roles.map(rid=>{const r=roleDef(rid);if(!r||r.is_hidden)return'';return `<span class="role-pill" style="background:${r.color}18;color:${r.color};">${r.label}</span>`;}).join('')}
       </div>
     </div>`).join('');
 }
-
-// Recherche live par nom dans la grille
 function filterPlayersByName(query){
   const q=query.toLowerCase().trim();
-  document.querySelectorAll('#player-grid .player-card').forEach(card=>{
-    // Le nom est dans le premier div font-weight:500
-    const nameEl=card.querySelector('div[style*="font-weight:500"]');
+  document.querySelectorAll('#player-grid .card').forEach(card=>{
+    const nameEl=card.querySelector('.player-row-name');
     const name=nameEl?nameEl.textContent.toLowerCase():'';
     card.style.display=(!q||name.includes(q))?'':'none';
   });
 }
-
 function filterPlayers(f){currentFilter=f;renderProfiles();}
 async function deletePlayer(id){if(!confirm('Supprimer ce joueur ?'))return;await sb.from('players').delete().eq('id',id);players=players.filter(p=>p.id!==id);renderProfiles();}
-
 function editPlayerRoles(id){
   editingPlayerId=id;
   const p=players.find(pl=>pl.id===id);
   document.getElementById('edit-player-name').textContent=p.name;
-  // Pré-remplir nom et discord ID
   document.getElementById('edit-name-input').value=p.name;
   document.getElementById('edit-discord-input').value=p.discord_id||'';
-  // Rôles (hors rôles cachés)
   document.getElementById('edit-roles-list').innerHTML=ROLES_DEF.filter(r=>!r.is_hidden).map(r=>`<div class="role-pill" style="cursor:pointer;" data-rid="${r.id}" onclick="toggleEditRole(this,'${r.id}','${r.color}')">${r.label}</div>`).join('');
   document.querySelectorAll('#edit-roles-list [data-rid]').forEach(el=>{applyPillState(el,p.roles.includes(el.dataset.rid),roleDef(el.dataset.rid).color);});
   document.getElementById('modal-edit-player').classList.add('open');
 }
-
 function toggleEditRole(el,rid){applyPillState(el,el.dataset.on!=='1',roleDef(rid).color);}
 function applyPillState(el,on,color){el.dataset.on=on?'1':'0';el.style.background=on?color:'transparent';el.style.color=on?'#0e1117':color;el.style.border=`1px solid ${color}${on?'':'44'}`;}
-
 async function savePlayerRoles(){
   const p=players.find(pl=>pl.id===editingPlayerId);
   const newRoles=Array.from(document.querySelectorAll('#edit-roles-list [data-rid]')).filter(el=>el.dataset.on==='1').map(el=>el.dataset.rid);
   const newName=document.getElementById('edit-name-input').value.trim()||p.name;
   const newDiscord=document.getElementById('edit-discord-input').value.trim()||null;
-
   await sb.from('players').update({roles:newRoles,name:newName,discord_id:newDiscord}).eq('id',editingPlayerId);
-  p.name=newName;
-  p.discord_id=newDiscord;
-  p.roles=newRoles;
-
-  // Si c'est le joueur identifié, on met à jour myPlayer
-  if(myDiscordId&&(myDiscordId===p.discord_id||myDiscordId===newDiscord)){
-    myPlayer=p;
-    renderSidebarIdentity();
-  }
-
-  closeEditModal();
-  renderProfiles();
+  p.name=newName;p.discord_id=newDiscord;p.roles=newRoles;
+  if(myDiscordId&&(myDiscordId===p.discord_id||myDiscordId===newDiscord)){myPlayer=p;renderSidebarIdentity();}
+  closeEditModal();renderProfiles();
 }
 function closeEditModal(){document.getElementById('modal-edit-player').classList.remove('open');}
 function openAddPlayer(){
@@ -517,7 +725,7 @@ async function confirmAddPlayer(){
 }
 function closeAddModal(){document.getElementById('modal-player').classList.remove('open');}
 
-// EVENT
+// ── EVENT ─────────────────────────────────────
 async function setMyPresence(st){
   if(!myDiscordId){openIdentityModal();return;}
   if(!currentEventId){alert('Aucun événement actif.');return;}
@@ -534,11 +742,13 @@ function getStatusStyle(st){
 function showPlayerRolesPopup(e,playerDiscordId,playerName,chipColor){
   e.stopPropagation();document.querySelectorAll('.player-roles-popup').forEach(el=>el.remove());
   const p=players.find(pl=>pl.discord_id===playerDiscordId);if(!p)return;
-  const rolesHtml=p.roles.length?p.roles.filter(rid=>!roleDef(rid)?.is_hidden).map(rid=>{const r=roleDef(rid);return r?`<span class="role-pill" style="background:${r.color}18;color:${r.color};margin:2px 3px;">${r.label}</span>`:''}).join(''):'<span style="color:var(--text3);font-size:11px;">Aucun rôle défini</span>';
+  const rolesHtml=p.roles.length?p.roles.filter(rid=>!roleDef(rid)?.is_hidden).map(rid=>{const r=roleDef(rid);return r?`<span class="role-pill" style="background:${r.color}18;color:${r.color};margin:2px 3px;">${r.label}</span>`:''}).join(''):'<span style="color:var(--text3);font-size:11px;">Aucun rôle</span>';
   const popup=document.createElement('div');popup.className='player-roles-popup';
   popup.innerHTML=`<div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:${chipColor};margin-bottom:8px;">${playerName}</div><div style="display:flex;flex-wrap:wrap;">${rolesHtml}</div>`;
   document.body.appendChild(popup);
-  popup.style.left=Math.min(e.clientX+10,window.innerWidth-300)+'px';popup.style.top=Math.min(e.clientY+10,window.innerHeight-200)+'px';
+  const x=Math.min(e.clientX+10,window.innerWidth-290);
+  const y=Math.min(e.clientY+10,window.innerHeight-160);
+  popup.style.left=x+'px';popup.style.top=y+'px';
   setTimeout(()=>{document.addEventListener('click',()=>popup.remove(),{once:true});},50);
 }
 function renderPresence(){
@@ -556,7 +766,7 @@ function renderPresence(){
     else{const r=assignedRole;const cls=r&&r.cls?classDef(r.cls):null;const c=cls?cls.color:(r?r.color:'#8b92a8');border=c+'55';bg=c+'12';color=c;avatarColor=c;}
     const meStyle=isMe?'box-shadow:0 0 0 2px rgba(255,255,255,0.35);':'';
     const avHtml=`<div style="width:18px;height:18px;border-radius:50%;background:${avatarColor}22;color:${avatarColor};display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:7px;flex-shrink:0;">${getInitials(p.name)}</div>`;
-    return `<div class="presence-chip" style="border-color:${border};background:${bg};color:${color};${meStyle}" onclick="showPlayerRolesPopup(event,'${p.discord_id}','${p.name}','${color}')">${avHtml}<span>${p.name}${isMe?' <span style="font-size:9px;opacity:.6;">(moi)</span>':''}</span><span class="chip-flag ${isFlagged?'on':''}" title="Marquer un doute" onclick="toggleFlag('${p.discord_id}',event)">⚑</span></div>`;
+    return `<div class="presence-chip" style="border-color:${border};background:${bg};color:${color};${meStyle}" onclick="showPlayerRolesPopup(event,'${p.discord_id}','${p.name}','${color}')">${avHtml}<span>${p.name}${isMe?' <span style="font-size:9px;opacity:.6;">(moi)</span>':''}</span><span class="chip-flag ${isFlagged?'on':''}" onclick="toggleFlag('${p.discord_id}',event)">⚑</span></div>`;
   };
   const freeHtml=free.map(p=>makeChip(p,true,null)).join('');
   let assignedHtml='';
@@ -571,7 +781,6 @@ async function toggleFlag(discordId,e){
   else{flagged.add(discordId);await sb.from('flagged').insert({event_id:currentEventId,discord_id:discordId});}
   renderPresence();
 }
-
 function renderComp(){
   const zone=document.getElementById('comp-zone');if(!currentComp){zone.innerHTML='';return;}
   const groups={};
@@ -589,13 +798,12 @@ function renderComp(){
       const assigned=assignments[rid]||[];const nSlots=visibleSlots(rid);
       const weapCnt={};assigned.forEach(a=>{if(a.weapon){const k=a.weapon.toLowerCase();weapCnt[k]=(weapCnt[k]||0)+1;}});
       const overCount=assigned.length>count;
-      let html=`<div style="font-size:11px;font-weight:600;color:${r.color};letter-spacing:.04em;margin:6px 0 3px;text-transform:uppercase;display:flex;align-items:center;gap:6px;">${r.label}<span style="color:${overCount?'#f04747':'var(--text3)'};font-weight:400;">${assigned.length}/${count}${overCount?'<span title="Dépassement" style="margin-left:2px;">⚠</span>':''}</span></div>`;
-      for(let i=0;i<nSlots;i++){const a=assigned[i];if(a){const p=players.find(pl=>pl.discord_id===a.playerId);const isDup=r.unique&&a.weapon&&(weapCnt[a.weapon.toLowerCase()]||0)>1;html+=`<div class="player-slot">${p?avatarEl(p.name,p.color||'#5865F2',22):'<div style="width:22px;height:22px;border-radius:50%;background:var(--bg3);flex-shrink:0;"></div>'}<span style="flex:1;font-weight:500;color:${r.color}">${p?p.name:'?'}</span><span class="slot-weapon" style="color:${isDup?'#f04747':'var(--text3)'};">${a.weapon||'—'}${isDup?' ⚠':''}</span><button class="btn btn-icon btn-danger" onclick="removeAssign('${rid}',${i})" style="margin-left:4px;font-size:10px;">✕</button></div>`;}else{html+=`<div class="empty-slot" onclick="openFloatingAssign(event,'${rid}')">+ Assigner</div>`;}}
+      let html=`<div style="font-size:11px;font-weight:600;color:${r.color};letter-spacing:.04em;margin:6px 0 3px;text-transform:uppercase;display:flex;align-items:center;gap:6px;">${r.label}<span style="color:${overCount?'#f04747':'var(--text3)'};font-weight:400;">${assigned.length}/${count}</span></div>`;
+      for(let i=0;i<nSlots;i++){const a=assigned[i];if(a){const p=players.find(pl=>pl.discord_id===a.playerId);const isDup=r.unique&&a.weapon&&(weapCnt[a.weapon.toLowerCase()]||0)>1;html+=`<div class="player-slot">${p?avatarEl(p.name,p.color||'#5865F2',22):'<div style="width:22px;height:22px;border-radius:50%;background:var(--bg3);flex-shrink:0;"></div>'}<span style="font-weight:500;color:${r.color}">${p?p.name:'?'}</span><span class="slot-weapon" style="${isDup?'color:#f04747':''}">${a.weapon||'—'}</span><button class="btn btn-icon btn-danger" onclick="removeAssign('${rid}',${i})" style="font-size:10px;margin-left:auto;">✕</button></div>`;}else{html+=`<div class="empty-slot" onclick="openFloatingAssign(event,'${rid}')">+ Assigner</div>`;}}
       return html;
     }).join('')}</div>`;
   }).join('');
 }
-
 async function removeAssign(rid,idx){
   const playerId=assignments[rid]?.[idx]?.playerId;if(assignments[rid])assignments[rid].splice(idx,1);
   if(currentEventId&&playerId)await sb.from('assignments').delete().eq('event_id',currentEventId).eq('role_id',rid).eq('discord_id',playerId);
@@ -604,78 +812,60 @@ async function removeAssign(rid,idx){
 function addTempRole(){tempRoles.push({id:'temp-'+Date.now(),label:'Rôle temporaire'});renderTempZone();}
 function renderTempZone(){
   const z=document.getElementById('temp-zone');if(!tempRoles.length){z.innerHTML='';return;}
-  z.innerHTML=`<div class="temp-section"><div class="temp-section-title">Rôles temporaires</div>${tempRoles.map(tr=>{const asgns=tempAssignments[tr.id]||[];return `<div class="temp-role-block"><div class="temp-role-header"><input class="temp-name-input" value="${tr.label}" oninput="renameTempRole('${tr.id}',this.value)"><button class="btn btn-danger btn-sm" onclick="deleteTempRole('${tr.id}')">🗑</button></div>${asgns.map((asgn,i)=>{const p=players.find(pl=>pl.discord_id===asgn.playerId);return p?`<div class="player-slot">${avatarEl(p.name,p.color||'#5865F2',24)}<span style="font-weight:500;flex:1;">${p.name}</span><span class="slot-weapon" style="color:var(--text3);">${asgn.weapon||'—'}</span><button class="btn btn-danger btn-icon" onclick="removeTempAssign('${tr.id}',${i})" style="font-size:10px;">✕</button></div>`:''}).join('')}<div class="empty-slot" onclick="openTempAssign('${tr.id}')">+ Assigner un joueur</div></div>`;}).join('')}</div>`;
+  z.innerHTML=`<div class="temp-section"><div class="temp-section-title">Rôles temporaires</div>${tempRoles.map(tr=>{const asgns=tempAssignments[tr.id]||[];return `<div class="temp-role-block"><div class="temp-role-header"><input class="temp-name-input" value="${tr.label}" oninput="renameTempRole('${tr.id}',this.value)"><button class="btn btn-danger btn-sm" onclick="deleteTempRole('${tr.id}')">🗑</button></div>${asgns.map((asgn,i)=>{const p=players.find(pl=>pl.discord_id===asgn.playerId);return p?`<div class="player-slot">${avatarEl(p.name,p.color||'#5865F2',24)}<span style="font-weight:500;flex:1;">${p.name}</span><span class="slot-weapon">${asgn.weapon||'—'}</span><button class="btn btn-danger btn-icon" onclick="removeTempAssign('${tr.id}',${i})" style="font-size:10px;">✕</button></div>`:''}).join('')}<div class="empty-slot" onclick="openTempAssign('${tr.id}')">+ Assigner un joueur</div></div>`;}).join('')}</div>`;
 }
 function renameTempRole(id,label){const t=tempRoles.find(r=>r.id===id);if(t)t.label=label;}
 function deleteTempRole(id){tempRoles=tempRoles.filter(r=>r.id!==id);delete tempAssignments[id];renderTempZone();renderPresence();}
 function removeTempAssign(id,idx){if(!tempAssignments[id])return;tempAssignments[id].splice(idx,1);if(!tempAssignments[id].length)delete tempAssignments[id];renderTempZone();renderPresence();}
 
-// FLOATING ASSIGN
-function openFloatingAssign(e,rid){pendingRoleId=rid;pendingPlayerId=null;pendingIsTemp=false;const r=roleDef(rid)||{label:rid,color:'#aaa'};_showFloating(e,rid,r,false);}
-function openTempAssign(tid){pendingTempId=tid;pendingPlayerId=null;pendingIsTemp=true;const tr=tempRoles.find(t=>t.id===tid)||{label:''};const fakeEvt={currentTarget:{getBoundingClientRect:()=>({right:window.innerWidth/2,top:window.innerHeight/3})}};_showFloating(fakeEvt,tid,{label:tr.label,color:'#8b92a8'},true);}
+// ── FLOATING ASSIGN (sheet on mobile) ─────────
+function openFloatingAssign(e,rid){pendingRoleId=rid;pendingPlayerId=null;pendingIsTemp=false;const r=roleDef(rid)||{label:rid,color:'#aaa'};_showFloating(rid,r,false);}
+function openTempAssign(tid){pendingTempId=tid;pendingPlayerId=null;pendingIsTemp=true;const tr=tempRoles.find(t=>t.id===tid)||{label:''};_showFloating(tid,{label:tr.label,color:'#8b92a8'},true);}
 
-function _showFloating(e,roleId,r,isTemp){
+function _showFloating(roleId,r,isTemp){
   const alreadyInRole=isTemp?(tempAssignments[roleId]||[]).map(a=>a.playerId):(assignments[roleId]||[]).map(a=>a.playerId);
   const usedElsewhere=new Set(Object.entries(assignments).filter(([rid2])=>rid2!==roleId).flatMap(([,arr])=>arr.map(a=>a.playerId)));
-  let candidates=isTemp?[...players]:(r.is_hidden?[...players]:players.filter(p=>p.roles.includes(roleId)));
-  const getGroup=(p)=>{
-    if(alreadyInRole.includes(p.discord_id))return 3;
-    if(p.discord_id===myDiscordId)return -1;
-    if(usedElsewhere.has(p.discord_id))return 2;
-    return 0;
-  };
+  let candidates=isTemp?[...players]:players.filter(p=>p.roles.includes(roleId));
+  const getGroup=(p)=>{if(alreadyInRole.includes(p.discord_id))return 3;if(p.discord_id===myDiscordId)return -1;if(usedElsewhere.has(p.discord_id))return 2;return 0;};
   const stOrder={present:0,maybe:1,none:2,absent:3};
-  candidates.sort((a,b)=>{
-    const ga=getGroup(a),gb=getGroup(b);if(ga!==gb)return ga-gb;
-    const pa=stOrder[presence[a.discord_id]||'none'],pb=stOrder[presence[b.discord_id]||'none'];
-    if(pa!==pb)return pa-pb;return a.name.localeCompare(b.name);
-  });
-  const modal=document.getElementById('modal-assign');
-  let html=`<div style="color:${r.color};font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:.05em;margin-bottom:8px;">${r.label}</div>`;
+  candidates.sort((a,b)=>{const ga=getGroup(a),gb=getGroup(b);if(ga!==gb)return ga-gb;const pa=stOrder[presence[a.discord_id]||'none'],pb=stOrder[presence[b.discord_id]||'none'];if(pa!==pb)return pa-pb;return a.name.localeCompare(b.name);});
+
+  let html=`<div style="color:${r.color};font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;letter-spacing:.05em;margin-bottom:10px;">${r.label}</div>`;
   html+=`<input class="modal-search" id="fa-player-search" placeholder="🔍 Rechercher un joueur..." oninput="filterFloatingList(this.value)">`;
-  html+=`<div id="fa-player-list" style="max-height:260px;overflow-y:auto;">`;
+  html+=`<div id="fa-player-list" style="max-height:45vh;overflow-y:auto;">`;
   let lastGroup=null;
   candidates.forEach(p=>{
-    const g=getGroup(p);
-    const isAlready=alreadyInRole.includes(p.discord_id);
-    const isUsed=usedElsewhere.has(p.discord_id);
-    const isMe=p.discord_id===myDiscordId;
-    if(g!==lastGroup){
-      if(g===-1) html+=`<div class="assign-group-label" style="color:#5865F2;">⭐ Moi</div>`;
-      else if(g===2) html+=`<div class="assign-group-label">Déjà assigné ailleurs</div>`;
-      lastGroup=g;
-    }
+    const g=getGroup(p);const isAlready=alreadyInRole.includes(p.discord_id);const isUsed=usedElsewhere.has(p.discord_id);const isMe=p.discord_id===myDiscordId;
+    if(g!==lastGroup){if(g===-1)html+=`<div class="assign-group-label" style="color:#5865F2;">⭐ Moi</div>`;else if(g===2)html+=`<div class="assign-group-label">Déjà assigné ailleurs</div>`;lastGroup=g;}
     const ps=presenceStatusText(p.discord_id);
     const usedInRole=Object.entries(assignments).find(([rid2,arr])=>rid2!==roleId&&arr.some(a=>a.playerId===p.discord_id));
     const subtext=isUsed?`→ déjà en ${(roleDef(usedInRole?.[0])||{label:usedInRole?.[0]}).label}`:`<span style="color:${ps.color};">${ps.ico} ${ps.txt}</span>`;
     const extraClass=isMe&&g===-1?'me-first':'';
-    html+=`<div class="modal-player-opt ${isAlready?'dimmed':''} ${isUsed&&!isAlready?'used':''} ${extraClass}" data-pid="${p.discord_id}" data-name="${p.name.toLowerCase()}">${avatarEl(p.name,p.color||'#5865F2',28)}<div style="flex:1;"><div style="font-weight:500;">${p.name}${isMe?' <span style="font-size:10px;color:#5865F2;">(moi)</span>':''}${flagged.has(p.discord_id)?'<span style="color:#f0c040;font-size:10px;margin-left:4px;">⚑</span>':''}</div><div style="font-size:11px;color:var(--text3);">${subtext}</div></div>${isAlready?'<span style="font-size:11px;color:var(--text3);">assigné</span>':''}</div>`;
+    html+=`<div class="modal-player-opt ${isAlready?'dimmed':''} ${isUsed&&!isAlready?'used':''} ${extraClass}" data-pid="${p.discord_id}" data-name="${p.name.toLowerCase()}">${avatarEl(p.name,p.color||'#5865F2',30)}<div style="flex:1;"><div style="font-weight:500;">${p.name}${isMe?' <span style="font-size:10px;color:#5865F2;">(moi)</span>':''}${flagged.has(p.discord_id)?'<span style="color:#f0c040;font-size:10px;margin-left:4px;">⚑</span>':''}</div><div style="font-size:11px;color:var(--text3);">${subtext}</div></div>${isAlready?'<span style="font-size:11px;color:var(--text3);">assigné</span>':''}</div>`;
   });
   html+=`</div><input id="fa-weapon" class="weapon-input" placeholder="Arme (ex: Permafrost, Hache...)" style="margin-top:10px;display:none;">`;
-  html+=`<div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end;"><button class="btn btn-sm" onclick="closeFloating()">Fermer</button><button class="btn btn-primary btn-sm" onclick="confirmFloating()">Confirmer</button></div>`;
-  modal.innerHTML=html;
-  modal.querySelectorAll('.modal-player-opt:not(.dimmed)').forEach(el=>{
+  html+=`<div style="display:flex;gap:6px;margin-top:12px;justify-content:flex-end;"><button class="btn btn-sm" onclick="closeFloating()">Fermer</button><button class="btn btn-primary btn-sm" onclick="confirmFloating()">Confirmer</button></div>`;
+
+  const body=document.getElementById('modal-assign-body');
+  body.innerHTML=html;
+  body.querySelectorAll('.modal-player-opt:not(.dimmed)').forEach(el=>{
     el.onclick=()=>{
       const wasSelected=el.classList.contains('selected');
-      modal.querySelectorAll('.modal-player-opt').forEach(x=>x.classList.remove('selected'));
+      body.querySelectorAll('.modal-player-opt').forEach(x=>x.classList.remove('selected'));
       el.classList.add('selected');pendingPlayerId=el.dataset.pid;
       const w=document.getElementById('fa-weapon');w.style.display='block';w.focus();
       if(wasSelected)setTimeout(confirmFloating,10);
     };
   });
-  modal.style.display='block';
-  const rect=e.currentTarget.getBoundingClientRect();
-  modal.style.left=Math.min(rect.right+10,window.innerWidth-390)+'px';
-  modal.style.top=Math.min(rect.top,window.innerHeight-480)+'px';
-  setTimeout(()=>{const s=document.getElementById('fa-player-search');if(s)s.focus();},50);
+  document.getElementById('modal-assign').style.display='flex';
+  setTimeout(()=>{const s=document.getElementById('fa-player-search');if(s)s.focus();},100);
 }
-
+function handleAssignBackdrop(e){if(e.target===document.getElementById('modal-assign'))closeFloating();}
 function filterFloatingList(query){
   const q=query.toLowerCase().trim();
   document.querySelectorAll('#fa-player-list .modal-player-opt').forEach(el=>{el.style.display=(!q||el.dataset.name.includes(q))?'flex':'none';});
   document.querySelectorAll('#fa-player-list .assign-group-label').forEach(lbl=>{let next=lbl.nextElementSibling;let has=false;while(next&&!next.classList.contains('assign-group-label')){if(next.style.display!=='none')has=true;next=next.nextElementSibling;}lbl.style.display=has?'':'none';});
 }
-
 async function confirmFloating(){
   if(!pendingPlayerId)return;
   const weapon=(document.getElementById('fa-weapon')||{}).value?.trim()||'';
@@ -687,19 +877,18 @@ async function confirmFloating(){
   closeFloating();renderComp();renderPresence();
 }
 function closeFloating(){document.getElementById('modal-assign').style.display='none';}
-document.addEventListener('click',e=>{const m=document.getElementById('modal-assign');if(m.style.display!=='none'&&!m.contains(e.target)&&!e.target.closest('.empty-slot')&&!e.target.closest('.temp-role-block'))closeFloating();});
 
-// COMP EDITOR
+// ── COMP EDITOR ───────────────────────────────
 function renderCompEditor(){
   document.getElementById('comp-tabs').innerHTML=comps.map((c,i)=>`<button class="btn btn-sm ${i===editCompIdx?'active':''}" onclick="selectComp(${i})">${c.name}</button>`).join('');
   document.getElementById('comp-name-input').value=editingComp?.name||'';
   let html='';
   CLASSES_DEF.forEach(cls=>{const classRoles=ROLES_DEF.filter(r=>r.cls===cls.id);if(!classRoles.length)return;
-    html+=`<div class="comp-class-card"><div class="comp-class-title" style="color:${cls.color}">${cls.label}</div><div class="comp-roles-grid">`;
+    html+=`<div class="comp-class-card"><div class="comp-class-title" style="color:${cls.color}">${cls.label}</div>`;
     classRoles.forEach(r=>{const slotDef=(editingComp?.slots||{})[r.id]||{count:0,strict:false};const qty=slotDef.count||0;const strict=slotDef.strict||false;
-      html+=`<div class="comp-role-card"><div style="display:flex;width:100%;justify-content:space-between;align-items:center;"><span class="comp-role-label" style="color:${r.color}" title="${r.label}">${r.label}${r.is_hidden?'<span class="hidden-badge">caché</span>':''}</span>${r.is_unique?'<span style="font-size:9px;color:var(--text3);">uniq</span>':''}</div><div style="display:flex;gap:12px;width:100%;align-items:center;"><div class="qty-pill"><button class="dec" onclick="changeQty('${r.id}',-1)">−</button><span class="qty-val" id="qty-${r.id}">${qty}</span><button class="inc" onclick="changeQty('${r.id}',1)">+</button></div><label class="max-toggle ${strict?'on':''}" title="Strict"><input type="checkbox" ${strict?'checked':''} onchange="toggleStrict('${r.id}',this.checked)" style="margin:0;">MAX</label></div></div>`;
+      html+=`<div class="comp-role-row"><span class="comp-role-label" style="color:${r.color}" title="${r.label}">${r.label}${r.is_hidden?'<span class="hidden-badge">caché</span>':''}${r.is_unique?'<span style="font-size:9px;color:var(--text3);margin-left:4px;">uniq</span>':''}</span><div class="qty-pill"><button class="dec" onclick="changeQty('${r.id}',-1)">−</button><span class="qty-val" id="qty-${r.id}">${qty}</span><button class="inc" onclick="changeQty('${r.id}',1)">+</button></div><label class="max-toggle ${strict?'on':''}" title="Strict"><input type="checkbox" ${strict?'checked':''} onchange="toggleStrict('${r.id}',this.checked)">MAX</label></div>`;
     });
-    html+=`</div></div>`;
+    html+=`</div>`;
   });
   document.getElementById('comp-editor').innerHTML=html||'<div style="color:var(--text3);padding:20px;">Aucun rôle défini.</div>';
 }
@@ -718,17 +907,17 @@ async function deleteCurrentComp(){
   if(comps.length<=1){alert('Au moins une composition est requise.');return;}
   const compToDelete=comps[editCompIdx];
   const{data:linkedEvents}=await sb.from('events').select('id,title').eq('comp_id',compToDelete.id);
-  let msg=`Supprimer la composition "${compToDelete.name}" ?`;
-  if(linkedEvents&&linkedEvents.length>0){msg=`⚠️ "${compToDelete.name}" est utilisée par ${linkedEvents.length} événement(s) :\n`+linkedEvents.map(e=>`  • ${e.title}`).join('\n')+`\n\nTous ces événements et leurs données seront supprimés.\n\nConfirmer ?`;}
+  let msg=`Supprimer "${compToDelete.name}" ?`;
+  if(linkedEvents&&linkedEvents.length>0){msg=`⚠️ "${compToDelete.name}" est utilisée par ${linkedEvents.length} événement(s).\n\nConfirmer ?`;}
   if(!confirm(msg))return;
   if(linkedEvents&&linkedEvents.length>0){const ids=linkedEvents.map(e=>e.id);for(const eid of ids){await sb.from('assignments').delete().eq('event_id',eid);await sb.from('presences').delete().eq('event_id',eid);await sb.from('flagged').delete().eq('event_id',eid);}await sb.from('events').delete().in('id',ids);}
-  const{error}=await sb.from('comps').delete().eq('id',compToDelete.id);if(error){alert('Erreur : '+error.message);return;}
+  const{error}=await sb.from('comps').delete().eq('id',compToDelete.id);if(error){alert('Erreur: '+error.message);return;}
   comps.splice(editCompIdx,1);editCompIdx=Math.max(0,editCompIdx-1);editingComp=JSON.parse(JSON.stringify(comps[editCompIdx]));
-  if(currentComp&&currentComp.id===compToDelete.id){currentComp=comps.length>0?JSON.parse(JSON.stringify(comps[0])):null;}
+  if(currentComp&&currentComp.id===compToDelete.id)currentComp=comps.length>0?JSON.parse(JSON.stringify(comps[0])):null;
   renderCompEditor();
 }
 
-// CLASSES & ROLES
+// ── CLASSES & ROLES ───────────────────────────
 let dragSrcIdx=null,dragSrcType=null;
 function initDrag(container,type){
   container.querySelectorAll('[data-drag-idx]').forEach(row=>{
@@ -760,10 +949,10 @@ function renderClassesEditor(){
     return `<div class="role-row-editor" draggable="true" data-drag-idx="${i}">
       <span style="color:var(--text3);font-size:12px;cursor:grab;margin-right:2px;">⠿</span>
       <div style="width:10px;height:10px;border-radius:50%;background:${r.color};flex-shrink:0;"></div>
-      <span style="flex:1;color:${r.color};font-weight:500;">${r.label}${isHidden?'<span class="hidden-badge">caché global</span>':''}</span>
-      <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${cls.color}22;color:${cls.color};font-weight:500;">${cls.label}</span>
-      <label title="Rôle caché global : n'apparaît pas sur les fiches joueurs" style="display:flex;align-items:center;gap:3px;font-size:10px;color:${isHidden?'#b478f0':'var(--text3)'};cursor:pointer;white-space:nowrap;">
-        <input type="checkbox" ${isHidden?'checked':''} onchange="toggleHiddenRole('${r.id}',this.checked)" style="accent-color:#b478f0;cursor:pointer;">Caché
+      <span style="flex:1;color:${r.color};font-weight:500;font-size:12px;">${r.label}${isHidden?'<span class="hidden-badge">caché</span>':''}</span>
+      <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${cls.color}22;color:${cls.color};font-weight:500;flex-shrink:0;">${cls.label}</span>
+      <label title="Rôle caché global" style="display:flex;align-items:center;gap:3px;font-size:10px;color:${isHidden?'#b478f0':'var(--text3)'};cursor:pointer;flex-shrink:0;">
+        <input type="checkbox" ${isHidden?'checked':''} onchange="toggleHiddenRole('${r.id}',this.checked)" style="accent-color:#b478f0;width:14px;height:14px;">
       </label>
       <button class="btn btn-danger btn-icon" onclick="deleteRole('${r.id}')">✕</button>
     </div>`;
@@ -771,19 +960,15 @@ function renderClassesEditor(){
   initDrag(rl,'role');
   document.getElementById('new-role-class').innerHTML=CLASSES_DEF.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
 }
-
-async function toggleHiddenRole(id,val){
-  const r=ROLES_DEF.find(r=>r.id===id);if(!r)return;
-  r.is_hidden=val;
-  await sb.from('roles_def').update({is_hidden:val}).eq('id',id);
-  renderClassesEditor();
-}
-
+async function toggleHiddenRole(id,val){const r=ROLES_DEF.find(r=>r.id===id);if(!r)return;r.is_hidden=val;await sb.from('roles_def').update({is_hidden:val}).eq('id',id);renderClassesEditor();}
 async function updateClassColor(id,color){const c=CLASSES_DEF.find(cc=>cc.id===id);if(c)c.color=color;ROLES_DEF.filter(r=>r.cls===id).forEach(r=>r.color=color);await sb.from('classes_def').update({color}).eq('id',id);await sb.from('roles_def').update({color}).eq('cls',id);renderClassesEditor();}
 async function addClass(){const name=document.getElementById('new-class-name').value.trim();const color=document.getElementById('new-class-color').value;if(!name)return;const id=name.toLowerCase().replace(/\s+/g,'-');if(CLASSES_DEF.find(c=>c.id===id)){alert('Classe déjà existante');return;}const sort_order=CLASSES_DEF.length;const{data}=await sb.from('classes_def').insert({id,label:name,color,sort_order}).select().single();CLASSES_DEF.push(data);document.getElementById('new-class-name').value='';renderClassesEditor();if(document.getElementById('view-comps').classList.contains('active'))renderCompEditor();}
 async function deleteClass(id){if(ROLES_DEF.some(r=>r.cls===id)){alert('Supprimez d\'abord les rôles de cette classe.');return;}await sb.from('classes_def').delete().eq('id',id);CLASSES_DEF=CLASSES_DEF.filter(c=>c.id!==id);renderClassesEditor();}
 async function addRole(){const name=document.getElementById('new-role-name').value.trim();const clsId=document.getElementById('new-role-class').value;if(!name||!clsId)return;const id=name.toLowerCase().replace(/\s+/g,'-');if(ROLES_DEF.find(r=>r.id===id)){alert('Rôle déjà existant');return;}const cls=classDef(clsId)||{color:'#aaa'};const sort_order=ROLES_DEF.length;const{data}=await sb.from('roles_def').insert({id,label:name,color:cls.color,cls:clsId,is_unique:false,is_hidden:false,sort_order}).select().single();ROLES_DEF.push(data);document.getElementById('new-role-name').value='';renderClassesEditor();if(document.getElementById('view-comps').classList.contains('active'))renderCompEditor();}
 async function deleteRole(id){await sb.from('roles_def').delete().eq('id',id);ROLES_DEF=ROLES_DEF.filter(r=>r.id!==id);renderClassesEditor();}
+
+// Close modals on backdrop click
+document.querySelectorAll('.modal').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});});
 
 init();
 </script>
