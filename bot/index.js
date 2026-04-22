@@ -121,13 +121,12 @@ async function buildEventEmbed(eventId) {
           const asgn = assignments[r.id] || [];
           const totalLines = Math.max(count, asgn.length);
 
-          // Colonne rôle : largeur dynamique, vide sur les lignes suivantes
+          // Colonne rôle : largeur dynamique, répété sur chaque ligne
           const roleLabel = r.label.padEnd(roleColWidth);
-          const emptyLabel = ' '.repeat(roleColWidth);
 
           for(let i = 0; i < totalLines; i++) {
             const a = asgn[i];
-            const label = i === 0 ? roleLabel : emptyLabel;
+            const label = roleLabel;
             if(a) {
               const p = (players||[]).find(pl => pl.discord_id === a.discordId);
               const name = (p ? p.name : '?').padEnd(nameColWidth);
