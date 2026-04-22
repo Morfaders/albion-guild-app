@@ -127,6 +127,96 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
 
 /* Séparateur dans modale édition */
 .modal-section-sep{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin:14px 0 8px;}
+
+/* =============================================
+   MOBILE BOTTOM NAV — uniquement sur mobile
+   ============================================= */
+.mobile-bottom-nav{display:none;}
+
+@media (max-width:768px){
+  /* Cacher la sidebar sur mobile */
+  .sidebar{display:none!important;}
+
+  /* L'app prend toute la largeur */
+  .app{flex-direction:column;height:100vh;}
+
+  /* Zone de contenu réduite pour laisser la place à la bottom nav */
+  .main{padding-bottom:64px;}
+
+  /* Bottom nav fixée en bas */
+  .mobile-bottom-nav{
+    display:flex;
+    position:fixed;
+    bottom:0;left:0;right:0;
+    height:64px;
+    background:var(--bg2);
+    border-top:1px solid var(--border2);
+    z-index:500;
+    align-items:stretch;
+  }
+  .mob-nav-btn{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    background:none;
+    border:none;
+    color:var(--text3);
+    font-family:'Inter',sans-serif;
+    font-size:9px;
+    font-weight:500;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:color .12s,background .12s;
+    padding:8px 4px;
+    position:relative;
+  }
+  .mob-nav-btn:hover{color:var(--text);background:var(--bg3);}
+  .mob-nav-btn.active{color:var(--text);}
+  .mob-nav-btn.active::after{
+    content:'';
+    position:absolute;
+    top:0;left:20%;right:20%;
+    height:2px;
+    border-radius:0 0 3px 3px;
+    background:var(--accent);
+  }
+  .mob-nav-btn.active .mob-nav-dot{background:var(--accent);}
+  .mob-nav-icon{font-size:18px;line-height:1;}
+  .mob-nav-label{font-size:9px;}
+
+  /* Ajuster le header canal */
+  .channel-header{padding:10px 14px;}
+  .content{padding:14px;}
+}
+/* =============================================
+   ADMIN LOCK OVERLAY
+   ============================================= */
+.admin-lock-overlay{
+  position:absolute;inset:0;
+  background:rgba(14,17,23,.92);
+  backdrop-filter:blur(4px);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  z-index:100;
+  border-radius:var(--r2);
+  gap:14px;
+}
+.admin-lock-icon{font-size:36px;line-height:1;}
+.admin-lock-title{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;letter-spacing:.06em;color:var(--text2);}
+.admin-lock-desc{font-size:12px;color:var(--text3);text-align:center;max-width:260px;line-height:1.6;}
+.admin-lock-input-wrap{display:flex;gap:8px;width:100%;max-width:280px;}
+.admin-lock-input{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;transition:border-color .12s;}
+.admin-lock-input:focus{border-color:var(--accent);}
+.admin-lock-input.error{border-color:#f04747;animation:shake .3s ease;}
+.admin-lock-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;background:rgba(88,101,242,.15);border:1px solid rgba(88,101,242,.3);font-size:11px;color:var(--accent);}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}}
+
+/* Wrap relatif pour les vues protégées */
+#view-comps, #view-classes{position:relative;}
 </style>
 </head>
 <body>
@@ -147,13 +237,33 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
       </div>
     </div>
   </div>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="mobile-bottom-nav">
+    <button class="mob-nav-btn active" id="mob-nav-profiles" onclick="showView('profiles')">
+      <span class="mob-nav-icon">👤</span>
+      <span class="mob-nav-label">Profils</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-nav-event" onclick="showView('event')">
+      <span class="mob-nav-icon">⚔️</span>
+      <span class="mob-nav-label">Événement</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-nav-comps" onclick="showView('comps')">
+      <span class="mob-nav-icon">🛠️</span>
+      <span class="mob-nav-label">Comp</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-nav-classes" onclick="showView('classes')">
+      <span class="mob-nav-icon">🎨</span>
+      <span class="mob-nav-label">Classes</span>
+    </button>
+  </nav>
+
   <div class="main">
     <div class="channel-header"><span id="ch-icon">👤</span><span class="channel-name" id="ch-name">profils-joueurs</span></div>
     <div class="content">
 
       <div class="view active" id="view-profiles">
         <div class="section-head"><div class="section-title">Profils joueurs</div><button class="btn btn-primary btn-sm" onclick="openAddPlayer()">+ Ajouter</button></div>
-        <!-- Barre de recherche -->
         <div class="player-search-wrap">
           <span class="search-icon">🔍</span>
           <input id="player-search" class="player-search-input" placeholder="Rechercher un joueur..." oninput="filterPlayersByName(this.value)">
@@ -186,6 +296,7 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
       </div>
 
       <div class="view" id="view-comps">
+        <!-- Admin lock overlay injecté dynamiquement -->
         <div class="section-head">
           <div class="section-title">Éditeur de composition</div>
           <div style="display:flex;gap:6px;">
@@ -200,6 +311,7 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
       </div>
 
       <div class="view" id="view-classes">
+        <!-- Admin lock overlay injecté dynamiquement -->
         <div class="section-head"><div class="section-title">Classes & Rôles</div><span style="font-size:11px;color:var(--text3);">Glissez pour réordonner — sauvegarde automatique</span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
           <div>
@@ -256,23 +368,33 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
   </div>
 </div>
 
-<!-- Modale édition joueur — avec nom, discord ID et rôles -->
 <div id="modal-edit-player" class="modal">
   <div class="modal-box">
     <div class="modal-title">Modifier — <span id="edit-player-name"></span></div>
-
     <div class="modal-section-sep">Informations</div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:4px;">
       <input id="edit-name-input" class="weapon-input" placeholder="Pseudo ingame">
       <input id="edit-discord-input" class="weapon-input" placeholder="Discord ID (ex: 123456789)">
     </div>
-
     <div class="modal-section-sep">Rôles</div>
     <div id="edit-roles-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;"></div>
-
     <div style="display:flex;gap:8px;justify-content:flex-end;">
       <button class="btn btn-sm" onclick="closeEditModal()">Annuler</button>
       <button class="btn btn-primary btn-sm" onclick="savePlayerRoles()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale admin unlock -->
+<div id="modal-admin-unlock" class="modal">
+  <div class="modal-box" style="max-width:360px;">
+    <div class="modal-title">🔐 Zone administrateur</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6;">Cette section est protégée. Entrez le mot de passe administrateur pour accéder à l'<strong style="color:var(--text);" id="unlock-target-name">éditeur</strong>.</div>
+    <input type="password" id="admin-pw-input" class="weapon-input" placeholder="Mot de passe..." style="margin-bottom:10px;" onkeydown="if(event.key==='Enter')tryAdminUnlock()">
+    <div id="admin-pw-error" style="font-size:12px;color:#f04747;margin-bottom:10px;display:none;">❌ Mot de passe incorrect.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-sm" onclick="closeAdminUnlockModal()">Annuler</button>
+      <button class="btn btn-primary btn-sm" onclick="tryAdminUnlock()">Déverrouiller</button>
     </div>
   </div>
 </div>
@@ -288,6 +410,47 @@ let currentComp=null,editingComp=null,editCompIdx=0,editingPlayerId=null;
 let newSelected=[],currentFilter='alpha';
 let pendingRoleId=null,pendingPlayerId=null,pendingIsTemp=false,pendingTempId=null;
 let currentEventId=null;
+
+// ADMIN LOCK
+const ADMIN_PASSWORD='Adminitracteur';
+const PROTECTED_VIEWS=['comps','classes'];
+let unlockedSessions=new Set(); // vues déverrouillées pour la session
+let pendingUnlockView=null;
+
+function isProtectedView(v){return PROTECTED_VIEWS.includes(v);}
+
+function requestAdminUnlock(targetView){
+  pendingUnlockView=targetView;
+  const names={comps:'l\'éditeur de composition',classes:'classes & rôles'};
+  document.getElementById('unlock-target-name').textContent=names[targetView]||targetView;
+  document.getElementById('admin-pw-input').value='';
+  document.getElementById('admin-pw-error').style.display='none';
+  document.getElementById('modal-admin-unlock').classList.add('open');
+  setTimeout(()=>document.getElementById('admin-pw-input').focus(),80);
+}
+
+function tryAdminUnlock(){
+  const val=document.getElementById('admin-pw-input').value;
+  if(val===ADMIN_PASSWORD){
+    unlockedSessions.add(pendingUnlockView);
+    closeAdminUnlockModal();
+    // On navigue vers la vue déverrouillée
+    _doShowView(pendingUnlockView);
+    pendingUnlockView=null;
+  } else {
+    const inp=document.getElementById('admin-pw-input');
+    const err=document.getElementById('admin-pw-error');
+    err.style.display='block';
+    inp.classList.add('error');
+    inp.value='';
+    setTimeout(()=>inp.classList.remove('error'),400);
+    setTimeout(()=>inp.focus(),50);
+  }
+}
+
+function closeAdminUnlockModal(){
+  document.getElementById('modal-admin-unlock').classList.remove('open');
+}
 
 // IDENTITE
 let myDiscordId=localStorage.getItem('myDiscordId')||null;
@@ -404,11 +567,28 @@ function presenceStatusText(discordId){
 
 // NAVIGATION
 const CH_META={profiles:['👤','profils-joueurs'],event:['⚔️','événement-actif'],comps:['🛠️','éditeur-comp'],classes:['🎨','classes-rôles']};
+
 function showView(v){
+  // Si la vue est protégée et pas encore déverrouillée, demander le mot de passe
+  if(isProtectedView(v)&&!unlockedSessions.has(v)){
+    requestAdminUnlock(v);
+    return;
+  }
+  _doShowView(v);
+}
+
+function _doShowView(v){
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  // Mobile nav
+  document.querySelectorAll('.mob-nav-btn').forEach(n=>n.classList.remove('active'));
+
   document.getElementById('view-'+v).classList.add('active');
   document.getElementById('nav-'+v).classList.add('active');
+  // Mobile nav correspondant
+  const mobBtn=document.getElementById('mob-nav-'+v);
+  if(mobBtn)mobBtn.classList.add('active');
+
   const[ico,name]=CH_META[v]||['📋',v];
   document.getElementById('ch-icon').textContent=ico;document.getElementById('ch-name').textContent=name;
   if(v==='profiles')renderProfiles();if(v==='event')renderEvent();if(v==='comps')renderCompEditor();if(v==='classes')renderClassesEditor();
@@ -421,10 +601,8 @@ function buildFilterRow(){
 }
 
 function renderProfiles(){
-  // Réinitialise la barre de recherche
   const ps=document.getElementById('player-search');
   if(ps) ps.value='';
-
   buildFilterRow();
   let list=[...players];
   if(currentFilter==='alpha')list.sort((a,b)=>a.name.localeCompare(b.name));
@@ -446,11 +624,9 @@ function renderProfiles(){
     </div>`).join('');
 }
 
-// Recherche live par nom dans la grille
 function filterPlayersByName(query){
   const q=query.toLowerCase().trim();
   document.querySelectorAll('#player-grid .player-card').forEach(card=>{
-    // Le nom est dans le premier div font-weight:500
     const nameEl=card.querySelector('div[style*="font-weight:500"]');
     const name=nameEl?nameEl.textContent.toLowerCase():'';
     card.style.display=(!q||name.includes(q))?'':'none';
@@ -464,10 +640,8 @@ function editPlayerRoles(id){
   editingPlayerId=id;
   const p=players.find(pl=>pl.id===id);
   document.getElementById('edit-player-name').textContent=p.name;
-  // Pré-remplir nom et discord ID
   document.getElementById('edit-name-input').value=p.name;
   document.getElementById('edit-discord-input').value=p.discord_id||'';
-  // Rôles (hors rôles cachés)
   document.getElementById('edit-roles-list').innerHTML=ROLES_DEF.filter(r=>!r.is_hidden).map(r=>`<div class="role-pill" style="cursor:pointer;" data-rid="${r.id}" onclick="toggleEditRole(this,'${r.id}','${r.color}')">${r.label}</div>`).join('');
   document.querySelectorAll('#edit-roles-list [data-rid]').forEach(el=>{applyPillState(el,p.roles.includes(el.dataset.rid),roleDef(el.dataset.rid).color);});
   document.getElementById('modal-edit-player').classList.add('open');
@@ -481,20 +655,10 @@ async function savePlayerRoles(){
   const newRoles=Array.from(document.querySelectorAll('#edit-roles-list [data-rid]')).filter(el=>el.dataset.on==='1').map(el=>el.dataset.rid);
   const newName=document.getElementById('edit-name-input').value.trim()||p.name;
   const newDiscord=document.getElementById('edit-discord-input').value.trim()||null;
-
   await sb.from('players').update({roles:newRoles,name:newName,discord_id:newDiscord}).eq('id',editingPlayerId);
-  p.name=newName;
-  p.discord_id=newDiscord;
-  p.roles=newRoles;
-
-  // Si c'est le joueur identifié, on met à jour myPlayer
-  if(myDiscordId&&(myDiscordId===p.discord_id||myDiscordId===newDiscord)){
-    myPlayer=p;
-    renderSidebarIdentity();
-  }
-
-  closeEditModal();
-  renderProfiles();
+  p.name=newName;p.discord_id=newDiscord;p.roles=newRoles;
+  if(myDiscordId&&(myDiscordId===p.discord_id||myDiscordId===newDiscord)){myPlayer=p;renderSidebarIdentity();}
+  closeEditModal();renderProfiles();
 }
 function closeEditModal(){document.getElementById('modal-edit-player').classList.remove('open');}
 function openAddPlayer(){
