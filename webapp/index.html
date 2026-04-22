@@ -26,7 +26,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
 .channel-header{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
 .channel-name{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;letter-spacing:.04em;}
-/* FIX #4 : contenu pleine largeur en vue événement */
 .content{padding:20px;flex:1;width:100%;}
 .content.event-layout{max-width:100%;}
 .content:not(.event-layout){max-width:980px;}
@@ -52,14 +51,12 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 /* ── PRESENCE BAR ── */
 .presence-bar{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:14px;transition:all .2s;}
 .presence-bar-title{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--text2);text-transform:uppercase;display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:0;}
-/* FIX #5 : bouton toggle présences */
 .presence-toggle-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;font-size:11px;color:var(--text2);cursor:pointer;transition:all .12s;user-select:none;margin-left:auto;}
 .presence-toggle-btn:hover{background:var(--bg4);color:var(--text);}
-.presence-list-wrap{overflow:hidden;transition:max-height .3s ease,opacity .3s ease;}
-.presence-list-wrap.collapsed{max-height:0!important;opacity:0;pointer-events:none;}
-.presence-list-wrap.expanded{opacity:1;}
 
-/* Chips draggables */
+/* FIX #2 : présences toujours visibles = present + maybe + in-comp, hidden = absent + none */
+.presence-list-wrap{overflow:hidden;transition:max-height .3s ease,opacity .3s ease;}
+/* En mode réduit, on cache via JS les chips .hide-when-collapsed */
 .presence-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);font-size:12px;color:var(--text2);cursor:grab;user-select:none;transition:opacity .15s,box-shadow .15s;}
 .presence-chip:active{cursor:grabbing;}
 .presence-chip.dragging{opacity:.35;cursor:grabbing;}
@@ -67,11 +64,13 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .chip-flag:hover{opacity:1;}
 .chip-flag.on{opacity:1;color:#f0c040;}
 
-/* FIX #4 : comp zone pleine largeur */
-.comp-zone{display:grid;gap:12px;}
+/* FIX #1 : comp zone — fiches a taille naturelle, grille adaptive */
+.comp-zone{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;}
+.comp-zone .role-block-class{flex:0 0 auto;min-width:200px;max-width:320px;width:auto;}
 
 /* Blocs de rôle avec états drag */
 .role-block{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;transition:border-color .18s,background .18s,box-shadow .18s;}
+/* FIX #5 : highlight drag sur les blocs de rôle individuels */
 .role-block.drop-compatible{border-color:rgba(61,220,132,.5);background:rgba(61,220,132,.04);}
 .role-block.drop-incompatible{border-color:rgba(240,71,71,.35);background:rgba(240,71,71,.03);opacity:.7;}
 .role-block.drop-over{border-color:#3ddc84 !important;background:rgba(61,220,132,.1) !important;box-shadow:0 0 0 2px rgba(61,220,132,.25);}
@@ -81,14 +80,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .player-slot:hover{background:var(--bg3);}
 .slot-weapon{font-family:'IBM Plex Mono',monospace;font-size:11px;}
 
-/* FIX #1 : Slot vide — état neutre / highlight drag compatible / incompatible */
+/* FIX #5 : Slot vide — highlight drag compatible / incompatible */
 .empty-slot{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;border:1px dashed var(--border2);font-size:12px;color:var(--text3);cursor:pointer;margin-bottom:3px;transition:all .15s;}
 .empty-slot:hover,.empty-slot.drag-over-slot{border-color:var(--accent);color:var(--accent);background:rgba(88,101,242,.05);}
-/* Highlight vert quand drag en cours + compatible */
 .drag-mode .empty-slot.slot-compatible{border-color:rgba(61,220,132,.7);color:#3ddc84;background:rgba(61,220,132,.07);animation:slotPulse 1.4s ease-in-out infinite;}
-/* Highlight rouge quand drag en cours + incompatible */
 .drag-mode .empty-slot.slot-incompatible{border-color:rgba(240,71,71,.4);color:#f04747;background:rgba(240,71,71,.04);opacity:.6;cursor:not-allowed;}
-/* Sur-highlight au drop */
 .drag-mode .empty-slot.slot-compatible.drag-over-slot{background:rgba(61,220,132,.18)!important;border-color:#3ddc84!important;box-shadow:0 0 0 2px rgba(61,220,132,.3);}
 @keyframes slotPulse{0%,100%{box-shadow:none;}50%{box-shadow:0 0 6px rgba(61,220,132,.35);}}
 
@@ -165,6 +161,16 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
 .event-date-input{font-family:'Inter',sans-serif;font-size:13px;background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--text2);padding:3px 8px;outline:none;width:220px;}
 .event-date-input:focus{border-color:var(--accent);}
 
+/* FIX #7 : Camembert comp */
+.event-top-row{display:flex;gap:16px;align-items:stretch;margin-bottom:16px;}
+.event-banner{flex:1;background:linear-gradient(135deg,#1a1f30,#1e2738);border:1px solid var(--border2);border-radius:var(--r2);padding:20px;}
+.comp-pie-card{flex:0 0 auto;width:200px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;}
+.comp-pie-title{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);text-align:center;}
+#comp-pie-canvas{display:block;}
+.comp-pie-legend{display:flex;flex-wrap:wrap;gap:4px 8px;justify-content:center;}
+.pie-legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);}
+.pie-legend-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
 @media(max-width:768px){
   .sidebar{display:none!important;}
   .app{flex-direction:column;height:100vh;}
@@ -178,6 +184,8 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
   .mob-nav-label{font-size:9px;}
   .channel-header{padding:10px 14px;}
   .content{padding:14px;}
+  .event-top-row{flex-direction:column;}
+  .comp-pie-card{width:100%;flex-direction:row;gap:16px;justify-content:flex-start;}
 }
 .admin-lock-input{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;}
 .admin-lock-input:focus{border-color:var(--accent);}
@@ -234,47 +242,63 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
       <div class="view" id="view-event">
         <div id="identity-banner-el"></div>
 
-        <!-- FIX #6 : Bandeau événement avec bouton éditer -->
-        <div id="event-banner" style="background:linear-gradient(135deg,#1a1f30,#1e2738);border:1px solid var(--border2);border-radius:var(--r2);padding:20px;margin-bottom:16px;">
-          <div id="event-title-display">
-            <div class="event-title-wrap">
-              <div style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;" id="event-title">⚔️ Événement</div>
-              <button class="event-edit-btn" onclick="toggleEventEdit()" id="event-edit-toggle-btn" title="Modifier titre et date">✏️ Modifier</button>
-            </div>
-            <div style="font-size:13px;color:var(--text2);margin-top:4px;" id="event-subtitle"><span id="present-count">0 présents</span></div>
-          </div>
-          <div id="event-edit-form" style="display:none;margin-top:10px;">
-            <div style="display:flex;flex-direction:column;gap:8px;">
-              <input id="event-title-edit" class="event-title-input" placeholder="Titre de l'événement">
-              <input id="event-date-edit" class="event-date-edit weapon-input" placeholder="Date et heure (ex: Vendredi 20h30)" style="font-family:'Inter',sans-serif;font-size:13px;">
-              <div style="display:flex;gap:8px;margin-top:4px;">
-                <button class="btn btn-primary btn-sm" onclick="saveEventEdit()">💾 Sauvegarder</button>
-                <button class="btn btn-sm" onclick="toggleEventEdit()">Annuler</button>
+        <!-- FIX #7 : Bandeau + camembert côte à côte -->
+        <div class="event-top-row">
+          <!-- Bandeau événement -->
+          <div class="event-banner" id="event-banner">
+            <div id="event-title-display">
+              <div class="event-title-wrap">
+                <div style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;" id="event-title">⚔️ Événement</div>
+                <button class="event-edit-btn" onclick="toggleEventEdit()" id="event-edit-toggle-btn" title="Modifier titre et date">✏️ Modifier</button>
+              </div>
+              <!-- FIX #4 : compteurs présent + peut-être dans le subtitle -->
+              <div style="font-size:13px;color:var(--text2);margin-top:6px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;" id="event-subtitle">
+                <span id="subtitle-date"></span>
+                <span style="display:inline-flex;align-items:center;gap:5px;"><span style="color:#3ddc84;font-weight:600;" id="count-present">0</span><span style="color:var(--text3);">présents</span></span>
+                <span style="display:inline-flex;align-items:center;gap:5px;"><span style="color:#f0c040;font-weight:600;" id="count-maybe">0</span><span style="color:var(--text3);">peut-être</span></span>
               </div>
             </div>
+            <div id="event-edit-form" style="display:none;margin-top:10px;">
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <input id="event-title-edit" class="event-title-input" placeholder="Titre de l'événement">
+                <input id="event-date-edit" class="event-date-edit weapon-input" placeholder="Date et heure (ex: Vendredi 20h30)" style="font-family:'Inter',sans-serif;font-size:13px;">
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                  <button class="btn btn-primary btn-sm" onclick="saveEventEdit()">💾 Sauvegarder</button>
+                  <button class="btn btn-sm" onclick="toggleEventEdit()">Annuler</button>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-success btn-sm" onclick="setMyPresence('present')">✓ Je suis là</button>
+              <button class="btn btn-warning btn-sm" onclick="setMyPresence('maybe')">? Peut-être</button>
+              <button class="btn btn-danger btn-sm" onclick="setMyPresence('absent')">✕ Absent</button>
+            </div>
           </div>
-          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-success btn-sm" onclick="setMyPresence('present')">✓ Je suis là</button>
-            <button class="btn btn-warning btn-sm" onclick="setMyPresence('maybe')">? Peut-être</button>
-            <button class="btn btn-danger btn-sm" onclick="setMyPresence('absent')">✕ Absent</button>
+
+          <!-- FIX #7 : Camembert répartition classe -->
+          <div class="comp-pie-card" id="comp-pie-card">
+            <div class="comp-pie-title">Répartition comp</div>
+            <canvas id="comp-pie-canvas" width="100" height="100"></canvas>
+            <div class="comp-pie-legend" id="comp-pie-legend"></div>
           </div>
         </div>
 
-        <!-- FIX #5 : Présences réductibles -->
+        <!-- FIX #2 : Présences avec section collapsible intelligente -->
         <div class="presence-bar" id="presence-bar-el">
           <div class="presence-bar-title">
             Présences
-            <span id="presence-count-inline" style="font-size:11px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;"></span>
             <span style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;" id="presence-drag-hint">— glissez un nom sur un rôle · ⚑ doute</span>
             <span class="drag-active-hint">🟢 déposez sur un slot compatible</span>
             <div class="presence-toggle-btn" onclick="togglePresenceList()" id="presence-toggle-btn">
               <span id="presence-toggle-icon">▼</span>
-              <span id="presence-toggle-label">Afficher</span>
+              <span id="presence-toggle-label">Afficher absents</span>
             </div>
           </div>
-          <!-- Wrap collapsible : réduit par défaut -->
-          <div class="presence-list-wrap collapsed" id="presence-list-wrap" style="max-height:0;">
-            <div id="presence-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
+          <!-- FIX #2 : Les présents/peut-être/in-comp sont TOUJOURS visibles -->
+          <div id="presence-list-always" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
+          <!-- Les absents/sans réponse sont dans la section collapsible -->
+          <div class="presence-list-wrap" id="presence-list-wrap" style="max-height:0;overflow:hidden;transition:max-height .3s ease,opacity .3s ease;opacity:0;">
+            <div id="presence-list-hidden" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border2);"></div>
           </div>
         </div>
 
@@ -282,6 +306,7 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
           <div class="section-title">Composition</div>
           <div style="display:flex;gap:8px;align-items:center;"><div id="event-comp-info"></div><button class="btn btn-sm" onclick="addTempRole()">+ Rôle temp.</button></div>
         </div>
+        <!-- FIX #1 : comp-zone en flex wrap -->
         <div id="comp-zone" class="comp-zone"></div>
         <div id="temp-zone"></div>
       </div>
@@ -343,7 +368,7 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
   </div>
 </div>
 
-<!-- Ajout joueur — discord ID OPTIONNEL (FIX #3) -->
+<!-- FIX #3 : discord ID optionnel -->
 <div id="modal-player" class="modal">
   <div class="modal-box">
     <div class="modal-title">Nouveau joueur</div>
@@ -394,7 +419,7 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
   </div>
 </div>
 
-<!-- Modale arme après drag & drop -->
+<!-- FIX #6 : Modale arme après drag & drop — on ne skip plus, on demande TOUJOURS -->
 <div id="modal-drag-weapon" class="modal">
   <div class="modal-box" style="max-width:340px;">
     <div class="modal-title" id="drag-weapon-title">Assigner</div>
@@ -418,9 +443,8 @@ let currentComp=null,editingComp=null,editCompIdx=0,editingPlayerId=null;
 let newSelected=[],currentFilter='alpha';
 let pendingRoleId=null,pendingPlayerId=null,pendingIsTemp=false,pendingTempId=null;
 let currentEventId=null;
-// FIX #5 : état liste présences (réduite par défaut)
+// FIX #2 : état liste présences (absents réduits par défaut)
 let presenceListExpanded=false;
-// FIX #6 : état édition événement
 let currentEventData=null;
 
 // --- DRAG STATE ---
@@ -497,7 +521,7 @@ async function init(){
   if(currentEventId){
     sb.channel('event-'+currentEventId)
       .on('postgres_changes',{event:'*',schema:'public',table:'presences',filter:`event_id=eq.${currentEventId}`},()=>{loadEventData(currentEventId).then(()=>{renderPresence();renderIdentityBanner();});})
-      .on('postgres_changes',{event:'*',schema:'public',table:'assignments',filter:`event_id=eq.${currentEventId}`},()=>{loadEventData(currentEventId).then(()=>{renderComp();renderPresence();});})
+      .on('postgres_changes',{event:'*',schema:'public',table:'assignments',filter:`event_id=eq.${currentEventId}`},()=>{loadEventData(currentEventId).then(()=>{renderComp();renderPresence();renderCompPie();});})
       .on('postgres_changes',{event:'*',schema:'public',table:'flagged',filter:`event_id=eq.${currentEventId}`},()=>{loadEventData(currentEventId).then(()=>renderPresence());})
       .subscribe();
   }
@@ -517,8 +541,11 @@ async function loadEventData(eventId){
   if(event){
     currentEventData=event;
     document.getElementById('event-title').textContent='⚔️ '+event.title;
+    const dateEl=document.getElementById('subtitle-date');if(dateEl)dateEl.textContent=event.event_date||'';
     const presentCount=Object.values(presence).filter(v=>v==='present').length;
-    document.getElementById('event-subtitle').innerHTML=(event.event_date||'')+' — <span id="present-count">'+presentCount+' présents</span>';
+    const maybeCount=Object.values(presence).filter(v=>v==='maybe').length;
+    const cp=document.getElementById('count-present');if(cp)cp.textContent=presentCount;
+    const cm=document.getElementById('count-maybe');if(cm)cm.textContent=maybeCount;
     if(event.comp_id){const comp=comps.find(c=>c.id===event.comp_id);if(comp)currentComp=JSON.parse(JSON.stringify(comp));}
     renderEventCompBadge(event.comp_id);
   }
@@ -530,13 +557,67 @@ function renderEventCompBadge(compId){
   el.innerHTML=comp?`<div class="comp-badge">🗂 Comp : <span class="comp-badge-name">${comp.name}</span></div>`:'<span style="font-size:12px;color:var(--text3);">Comp introuvable</span>';
 }
 
+// --- FIX #7 : Camembert répartition comp ---
+function renderCompPie(){
+  const canvas=document.getElementById('comp-pie-canvas');
+  const legend=document.getElementById('comp-pie-legend');
+  if(!canvas||!currentComp)return;
+  const ctx=canvas.getContext('2d');
+  // Compter les slots assignés par classe
+  const classCounts={};
+  Object.entries(assignments).forEach(([rid,arr])=>{
+    const r=ROLES_DEF.find(ro=>ro.id===rid);
+    if(!r)return;
+    const cls=CLASSES_DEF.find(c=>c.id===r.cls);
+    if(!cls)return;
+    if(!classCounts[cls.id])classCounts[cls.id]={count:0,color:cls.color,label:cls.label};
+    classCounts[cls.id].count+=arr.length;
+  });
+  // Si aucun assigné, utiliser les slots prévus de la comp
+  const hasAssigned=Object.values(classCounts).some(c=>c.count>0);
+  const compCounts={};
+  if(!hasAssigned&&currentComp.slots){
+    Object.entries(currentComp.slots).forEach(([rid,s])=>{
+      if(!s||!s.count)return;
+      const r=ROLES_DEF.find(ro=>ro.id===rid);
+      if(!r)return;
+      const cls=CLASSES_DEF.find(c=>c.id===r.cls);
+      if(!cls)return;
+      if(!compCounts[cls.id])compCounts[cls.id]={count:0,color:cls.color,label:cls.label};
+      compCounts[cls.id].count+=s.count;
+    });
+  }
+  const data=hasAssigned?classCounts:compCounts;
+  const entries=Object.values(data).filter(e=>e.count>0);
+  const total=entries.reduce((s,e)=>s+e.count,0);
+  ctx.clearRect(0,0,100,100);
+  if(total===0){
+    ctx.beginPath();ctx.arc(50,50,44,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.05)';ctx.fill();
+    legend.innerHTML='<span style="font-size:10px;color:var(--text3);">Aucune donnée</span>';
+    return;
+  }
+  let startAngle=-Math.PI/2;
+  const gap=0.03;
+  entries.forEach(e=>{
+    const slice=(e.count/total)*(Math.PI*2);
+    ctx.beginPath();ctx.moveTo(50,50);ctx.arc(50,50,44,startAngle+gap,startAngle+slice-gap);ctx.closePath();
+    ctx.fillStyle=e.color;ctx.fill();
+    // Numéro au centre du segment
+    const midAngle=startAngle+slice/2;
+    const tx=50+Math.cos(midAngle)*27;const ty=50+Math.sin(midAngle)*27;
+    ctx.fillStyle='rgba(0,0,0,0.7)';ctx.font='bold 11px Rajdhani,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    if(slice>0.3)ctx.fillText(e.count,tx,ty);
+    startAngle+=slice;
+  });
+  // Légende
+  legend.innerHTML=entries.map(e=>`<div class="pie-legend-item"><div class="pie-legend-dot" style="background:${e.color}"></div><span>${e.count}</span></div>`).join('');
+}
+
 // --- FIX #6 : Édition titre/date événement ---
 function toggleEventEdit(){
   const form=document.getElementById('event-edit-form');
-  const titleDisplay=document.getElementById('event-title-display');
   const isOpen=form.style.display!=='none';
   if(!isOpen){
-    // Ouvrir
     if(currentEventData){
       document.getElementById('event-title-edit').value=currentEventData.title||'';
       document.getElementById('event-date-edit').value=currentEventData.event_date||'';
@@ -545,7 +626,6 @@ function toggleEventEdit(){
     document.getElementById('event-edit-toggle-btn').textContent='✕ Annuler';
     setTimeout(()=>document.getElementById('event-title-edit').focus(),50);
   } else {
-    // Fermer
     form.style.display='none';
     document.getElementById('event-edit-toggle-btn').textContent='✏️ Modifier';
   }
@@ -559,37 +639,29 @@ async function saveEventEdit(){
   if(error){alert('Erreur: '+error.message);return;}
   currentEventData={...currentEventData,title:newTitle,event_date:newDate};
   document.getElementById('event-title').textContent='⚔️ '+newTitle;
-  const presentCount=Object.values(presence).filter(v=>v==='present').length;
-  document.getElementById('event-subtitle').innerHTML=(newDate||'')+' — <span id="present-count">'+presentCount+' présents</span>';
-  // Fermer le formulaire
+  const dateEl=document.getElementById('subtitle-date');if(dateEl)dateEl.textContent=newDate||'';
   document.getElementById('event-edit-form').style.display='none';
   document.getElementById('event-edit-toggle-btn').textContent='✏️ Modifier';
-  // Feedback
   const btn=document.querySelector('[onclick="saveEventEdit()"]');
   if(btn){const o=btn.textContent;btn.textContent='✓ Sauvegardé';setTimeout(()=>btn.textContent=o,1500);}
 }
 
-// --- FIX #5 : Toggle liste présences ---
+// --- FIX #2 : Toggle liste absents/sans réponse ---
 function togglePresenceList(){
   presenceListExpanded=!presenceListExpanded;
   const wrap=document.getElementById('presence-list-wrap');
   const icon=document.getElementById('presence-toggle-icon');
   const label=document.getElementById('presence-toggle-label');
-  const hint=document.getElementById('presence-drag-hint');
   if(presenceListExpanded){
-    wrap.classList.remove('collapsed');
-    wrap.classList.add('expanded');
-    wrap.style.maxHeight=wrap.scrollHeight+200+'px';
+    wrap.style.maxHeight=wrap.scrollHeight+300+'px';
+    wrap.style.opacity='1';
     icon.textContent='▲';
-    label.textContent='Réduire';
-    if(hint)hint.style.display='inline';
+    label.textContent='Masquer absents';
   } else {
-    wrap.classList.add('collapsed');
-    wrap.classList.remove('expanded');
     wrap.style.maxHeight='0';
+    wrap.style.opacity='0';
     icon.textContent='▼';
-    label.textContent='Afficher';
-    if(hint)hint.style.display='none';
+    label.textContent='Afficher absents';
   }
 }
 
@@ -620,7 +692,6 @@ function _doShowView(v){
   const mob=document.getElementById('mob-nav-'+v);if(mob)mob.classList.add('active');
   const[ico,name]=CH_META[v]||['📋',v];
   document.getElementById('ch-icon').textContent=ico;document.getElementById('ch-name').textContent=name;
-  // FIX #4 : contenu pleine largeur en vue événement
   const content=document.getElementById('main-content');
   if(v==='event'){content.classList.add('event-layout');}else{content.classList.remove('event-layout');}
   if(v==='profiles')renderProfiles();if(v==='event')renderEvent();if(v==='comps')renderCompEditor();if(v==='classes')renderClassesEditor();
@@ -682,7 +753,7 @@ async function savePlayerRoles(){
 }
 function closeEditModal(){document.getElementById('modal-edit-player').classList.remove('open');}
 
-// FIX #3 : openAddPlayer — discord_id optionnel, null en DB (pas de 0)
+// FIX #3 + FIX #8 : openAddPlayer — discord_id optionnel, auto-identification après création
 function openAddPlayer(preDiscordId=''){
   newSelected=[];
   document.getElementById('new-name').value='';
@@ -697,7 +768,6 @@ function toggleNewRole(el,rid,color){
 }
 async function confirmAddPlayer(){
   const name=document.getElementById('new-name').value.trim();
-  // FIX #3 : discord_id vide = null, jamais 0
   const discordRaw=document.getElementById('new-discord-id').value.trim();
   const discord_id=discordRaw||null;
   if(!name){alert('Le pseudo est requis.');return;}
@@ -705,7 +775,29 @@ async function confirmAddPlayer(){
   const color=palette[players.length%palette.length];
   const{data,error}=await sb.from('players').insert({name,discord_id,color,roles:newSelected}).select().single();
   if(error){alert('Erreur: '+error.message);return;}
-  players.push({...data,roles:data.roles||[]});closeAddModal();renderProfiles();
+  const newPlayer={...data,roles:data.roles||[]};
+  players.push(newPlayer);
+  closeAddModal();
+  renderProfiles();
+  // FIX #8 : auto-identification si pas déjà identifié
+  if(!myDiscordId&&discord_id){
+    myDiscordId=discord_id;
+    localStorage.setItem('myDiscordId',discord_id);
+    myPlayer=newPlayer;
+    renderSidebarIdentity();
+    renderIdentityBanner();
+  } else if(!myDiscordId&&!discord_id){
+    // Pas de discord_id → proposer de s'identifier avec ce nouveau joueur
+    if(confirm(`Vous n'êtes pas encore identifié. Vous identifier en tant que "${name}" ?`)){
+      // On utilise l'id interne comme clé temporaire si pas de discord_id
+      // On le met dans la session locale via l'id DB
+      myPlayer=newPlayer;
+      // Stocker par id DB en fallback
+      localStorage.setItem('myPlayerId',String(newPlayer.id));
+      renderSidebarIdentity();
+      renderIdentityBanner();
+    }
+  }
 }
 function closeAddModal(){document.getElementById('modal-player').classList.remove('open');}
 
@@ -715,8 +807,13 @@ async function setMyPresence(st){
   if(!currentEventId){alert('Aucun événement actif.');return;}
   await sb.from('presences').upsert({event_id:currentEventId,discord_id:myDiscordId,status:st});
   presence[myDiscordId]=st;renderPresence();renderIdentityBanner();
+  // Mettre à jour compteurs
+  const presentCount=Object.values(presence).filter(v=>v==='present').length;
+  const maybeCount=Object.values(presence).filter(v=>v==='maybe').length;
+  const cp=document.getElementById('count-present');if(cp)cp.textContent=presentCount;
+  const cm=document.getElementById('count-maybe');if(cm)cm.textContent=maybeCount;
 }
-function renderEvent(){renderIdentityBanner();renderPresence();renderComp();renderTempZone();}
+function renderEvent(){renderIdentityBanner();renderPresence();renderComp();renderTempZone();renderCompPie();}
 function getStatusStyle(st){
   if(st==='present')return{border:'rgba(61,220,132,.4)',bg:'rgba(61,220,132,.08)',color:'#3ddc84'};
   if(st==='maybe')return{border:'rgba(240,192,64,.4)',bg:'rgba(240,192,64,.08)',color:'#f0c040'};
@@ -735,7 +832,7 @@ function showPlayerRolesPopup(e,playerDiscordId,playerName,chipColor){
 }
 
 // =============================================
-//  FIX #1 : DRAG & DROP avec highlight précis
+//  FIX #5 : DRAG & DROP avec highlight précis
 // =============================================
 function startPresenceDrag(e,discordId,playerName,color){
   dragPlayerId=discordId;
@@ -745,10 +842,9 @@ function startPresenceDrag(e,discordId,playerName,color){
   ghost.innerHTML=`${avatarEl(playerName,color,20)}<span style="color:${color};">${playerName}</span>`;
   ghost.style.opacity='1';
 
-  // FIX #1 : highlight des SLOTS individuels + des role-blocks parents
+  // Highlight des blocs de rôle
   document.querySelectorAll('.role-block[data-rid]').forEach(block=>{
     const rid=block.dataset.rid;
-    // Blocs classe (pas des rôles) — on ignore
     if(CLASSES_DEF.find(c=>c.id===rid))return;
     const slots=currentComp?.slots||{};
     if(!slots[rid]||!slots[rid].count){block.classList.remove('drop-compatible','drop-incompatible');return;}
@@ -757,7 +853,7 @@ function startPresenceDrag(e,discordId,playerName,color){
     block.classList.toggle('drop-incompatible',!ok);
   });
 
-  // FIX #1 : Marquer les empty-slots individuels
+  // Marquer les empty-slots individuels
   document.querySelectorAll('.empty-slot').forEach(slot=>{
     const rid=slot.dataset.rid||slot.closest('[data-rid]')?.dataset?.rid;
     if(!rid)return;
@@ -773,7 +869,6 @@ function endPresenceDrag(){
   dragPlayerId=null;
   document.getElementById('drag-ghost').style.opacity='0';
   document.querySelectorAll('.role-block').forEach(b=>b.classList.remove('drop-compatible','drop-incompatible','drop-over'));
-  // FIX #1 : retirer les classes slot
   document.querySelectorAll('.empty-slot').forEach(s=>s.classList.remove('slot-compatible','slot-incompatible','drag-over-slot'));
   document.getElementById('presence-bar-el').classList.remove('drag-mode');
 }
@@ -797,6 +892,8 @@ function onRoleBlockDragLeave(e,rid){
   const block=document.querySelector(`.role-block[data-rid="${rid}"]`);
   if(block&&!block.contains(e.relatedTarget))block.classList.remove('drop-over');
 }
+
+// FIX #6 : onRoleBlockDrop — TOUJOURS afficher la modale arme
 function onRoleBlockDrop(e,rid){
   e.preventDefault();e.stopPropagation();
   const pid=dragPlayerId||e.dataTransfer.getData('text/plain');
@@ -807,11 +904,14 @@ function onRoleBlockDrop(e,rid){
     if(block){block.style.transition='none';block.style.borderColor='#f04747';setTimeout(()=>{block.style.transition='';block.style.borderColor='';},600);}
     return;
   }
+  // Toujours demander l'arme — FIX #6
   dragPendingRoleId=rid;
   const p=players.find(pl=>pl.discord_id===pid);
   const r=roleDef(rid);
   document.getElementById('drag-weapon-title').innerHTML=`${avatarEl(p?p.name:'?',p?.color||'#5865F2',22)} <span>${p?p.name:'?'}</span> <span style="color:var(--text3);font-weight:400;font-size:14px;">→</span> <span style="color:${r?.color||'#aaa'}">${r?r.label:rid}</span>`;
-  document.getElementById('drag-weapon-input').value='';
+  // Pré-remplir si déjà assigné
+  const existingAssign=Object.values(assignments).flat().find(a=>a.playerId===pid);
+  document.getElementById('drag-weapon-input').value=existingAssign?.weapon||'';
   document.getElementById('modal-drag-weapon').dataset.pid=pid;
   document.getElementById('modal-drag-weapon').classList.add('open');
   setTimeout(()=>document.getElementById('drag-weapon-input').focus(),80);
@@ -828,31 +928,47 @@ async function confirmDragAssign(){
   assignments[rid].push({playerId:pid,weapon});
   await sb.from('assignments').delete().eq('event_id',currentEventId).eq('discord_id',pid);
   await sb.from('assignments').insert({event_id:currentEventId,role_id:rid,discord_id:pid,weapon});
-  renderComp();renderPresence();
+  renderComp();renderPresence();renderCompPie();
 }
 function closeDragWeaponModal(){document.getElementById('modal-drag-weapon').classList.remove('open');}
 
-// FIX #5 : renderPresence — filtre les non-répondants quand réduit
+// FIX #2 : renderPresence — séparation always/hidden
 function renderPresence(){
+  const assignedIds=new Set(Object.values(assignments).flat().map(a=>a.playerId));
+
   const o={present:0,maybe:1,none:2,absent:3};
   const sortFn=(a,b)=>{const pa=o[presence[a.discord_id]||'none'],pb=o[presence[b.discord_id]||'none'];if(pa!==pb)return pa-pb;return a.name.localeCompare(b.name);};
-  const assignedIds=new Set(Object.values(assignments).flat().map(a=>a.playerId));
+
+  // Toujours visibles : présent + peut-être + in-comp
+  const alwaysVisible=players.filter(p=>{
+    const st=presence[p.discord_id]||'none';
+    const inComp=assignedIds.has(p.discord_id);
+    return st==='present'||st==='maybe'||inComp;
+  });
+  // Cachés quand réduit : absent + sans réponse (et pas in-comp)
+  const hiddenWhenCollapsed=players.filter(p=>{
+    const st=presence[p.discord_id]||'none';
+    const inComp=assignedIds.has(p.discord_id);
+    return !inComp&&(st==='absent'||st==='none');
+  });
+
   const clsOrder=(p)=>{const r=getAssignedRole(p.discord_id);if(!r)return 999;return CLASSES_DEF.findIndex(c=>c.id===r.cls);};
   const assignedSortFn=(a,b)=>{const ca=clsOrder(a),cb=clsOrder(b);if(ca!==cb)return ca-cb;return a.name.localeCompare(b.name);};
 
-  // Présents/peut-être/absents (ont répondu)
-  const responded=players.filter(p=>presence[p.discord_id]);
-  const notResponded=players.filter(p=>!presence[p.discord_id]);
-
-  const free=responded.filter(p=>!assignedIds.has(p.discord_id)).sort(sortFn);
-  const freeNoReply=notResponded.filter(p=>!assignedIds.has(p.discord_id)).sort(sortFn);
-  const assigned=players.filter(p=>assignedIds.has(p.discord_id)).sort(assignedSortFn);
-
-  const makeChip=(p,useStatusColor,assignedRole,dimmed=false)=>{
-    const st=presence[p.discord_id]||'none';const isFlagged=flagged.has(p.discord_id);const isMe=p.discord_id===myDiscordId;
+  const makeChip=(p,dimmed=false)=>{
+    const st=presence[p.discord_id]||'none';
+    const isFlagged=flagged.has(p.discord_id);
+    const isMe=p.discord_id===myDiscordId;
+    const inComp=assignedIds.has(p.discord_id);
     let border,bg,color,avatarColor;
-    if(useStatusColor){const s=getStatusStyle(st);border=s.border;bg=s.bg;color=s.color;avatarColor=s.color;}
-    else{const r=assignedRole;const cls=r&&r.cls?classDef(r.cls):null;const c=cls?cls.color:(r?r.color:'#8b92a8');border=c+'55';bg=c+'12';color=c;avatarColor=c;}
+    if(inComp){
+      const r=getAssignedRole(p.discord_id);
+      const cls=r&&r.cls?classDef(r.cls):null;
+      const c=cls?cls.color:(r?r.color:'#8b92a8');
+      border=c+'55';bg=c+'12';color=c;avatarColor=c;
+    } else {
+      const s=getStatusStyle(st);border=s.border;bg=s.bg;color=s.color;avatarColor=s.color;
+    }
     if(dimmed){border='rgba(255,255,255,0.06)';bg='transparent';color='var(--text3)';avatarColor='var(--text3)';}
     const meStyle=isMe?'box-shadow:0 0 0 2px rgba(255,255,255,0.35);':'';
     const avHtml=`<div style="width:18px;height:18px;border-radius:50%;background:${avatarColor}22;color:${avatarColor};display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:7px;flex-shrink:0;">${getInitials(p.name)}</div>`;
@@ -861,26 +977,38 @@ function renderPresence(){
     return `<div class="presence-chip" style="border-color:${border};background:${bg};color:${color};${dimmed?'opacity:.45;':''}${meStyle}" ${drag} onclick="showPlayerRolesPopup(event,'${p.discord_id||''}','${safeN}','${color}')">${avHtml}<span>${p.name}${isMe?' <span style="font-size:9px;opacity:.6;">(moi)</span>':''}</span><span class="chip-flag ${isFlagged?'on':''}" title="Marquer un doute" onclick="toggleFlag(event,'${p.discord_id||''}')">⚑</span></div>`;
   };
 
-  const freeHtml=free.map(p=>makeChip(p,true,null)).join('');
-  // Joueurs sans réponse — toujours affichés mais plus discrets
-  const noReplyHtml=freeNoReply.map(p=>makeChip(p,true,null,true)).join('');
-  let assignedHtml='';
-  if(assigned.length){assignedHtml=`<div style="width:100%;height:1px;background:var(--border2);margin:8px 0 6px;position:relative;"><span style="position:absolute;left:50%;transform:translateX(-50%) translateY(-50%);background:var(--bg2);padding:0 8px;font-size:10px;color:var(--text3);white-space:nowrap;">en comp</span></div>`+assigned.map(p=>{const r=getAssignedRole(p.discord_id);return makeChip(p,false,r);}).join('');}
+  // Section toujours visible : présents/maybe/in-comp (triés)
+  const freeAlways=alwaysVisible.filter(p=>!assignedIds.has(p.discord_id)).sort(sortFn);
+  const assignedInComp=alwaysVisible.filter(p=>assignedIds.has(p.discord_id)).sort(assignedSortFn);
 
-  document.getElementById('presence-list').innerHTML=freeHtml+noReplyHtml+assignedHtml;
-
-  // Mettre à jour la hauteur max si la liste est ouverte
-  if(presenceListExpanded){
-    const wrap=document.getElementById('presence-list-wrap');
-    if(wrap)wrap.style.maxHeight=wrap.scrollHeight+200+'px';
+  let alwaysHtml=freeAlways.map(p=>makeChip(p,false)).join('');
+  if(assignedInComp.length){
+    alwaysHtml+=`<div style="width:100%;display:flex;align-items:center;gap:6px;margin:4px 0;"><div style="flex:1;height:1px;background:var(--border2);"></div><span style="font-size:9px;color:var(--text3);white-space:nowrap;">en comp</span><div style="flex:1;height:1px;background:var(--border2);"></div></div>`;
+    alwaysHtml+=assignedInComp.map(p=>makeChip(p,false)).join('');
   }
 
+  // Section collapsible : absents + sans réponse
+  const hiddenSorted=[...hiddenWhenCollapsed].sort(sortFn);
+  const hiddenHtml=hiddenSorted.map(p=>makeChip(p,p.discord_id&&(presence[p.discord_id]||'none')==='none')).join('');
+
+  document.getElementById('presence-list-always').innerHTML=alwaysHtml||'<span style="font-size:12px;color:var(--text3);margin-top:6px;">Aucune présence confirmée</span>';
+  document.getElementById('presence-list-hidden').innerHTML=hiddenHtml;
+
+  // Mettre à jour hauteur si ouvert
+  if(presenceListExpanded){
+    const wrap=document.getElementById('presence-list-wrap');
+    if(wrap)wrap.style.maxHeight=wrap.scrollHeight+300+'px';
+  }
+
+  // Masquer le bouton toggle s'il n'y a rien à cacher
+  const toggleBtn=document.getElementById('presence-toggle-btn');
+  if(toggleBtn)toggleBtn.style.display=hiddenSorted.length?'inline-flex':'none';
+
+  // FIX #4 : Mise à jour compteurs dans le titre
   const presentCount=Object.values(presence).filter(v=>v==='present').length;
   const maybeCount=Object.values(presence).filter(v=>v==='maybe').length;
-  const pc=document.getElementById('present-count');if(pc)pc.textContent=presentCount+' présents';
-  // Compteur inline dans le titre de la barre
-  const ci=document.getElementById('presence-count-inline');
-  if(ci)ci.textContent=`(${presentCount}🟢 ${maybeCount}🟡 ${freeNoReply.length}⚫)${flagged.size?' · '+flagged.size+' ⚑':''}`;
+  const cp=document.getElementById('count-present');if(cp)cp.textContent=presentCount;
+  const cm=document.getElementById('count-maybe');if(cm)cm.textContent=maybeCount;
 }
 
 async function toggleFlag(e,discordId){
@@ -890,7 +1018,7 @@ async function toggleFlag(e,discordId){
   renderPresence();
 }
 
-// FIX #4 : renderComp — grille adaptive pleine largeur
+// FIX #1 : renderComp — flex wrap, fiches à taille naturelle
 function renderComp(){
   const zone=document.getElementById('comp-zone');if(!currentComp){zone.innerHTML='';return;}
   const groups={};
@@ -902,21 +1030,16 @@ function renderComp(){
   });
   if(Object.keys(groups).length===0){zone.innerHTML='<div style="color:var(--text3);padding:20px;font-size:13px;">Aucune composition chargée.</div>';return;}
 
-  // FIX #4 : on calcule le nombre de colonnes dynamiquement
-  const nbGroups=Object.keys(groups).length;
-  // CSS grid : auto-fill avec minmax s'adapte naturellement à la largeur de l'écran
-  zone.style.gridTemplateColumns=`repeat(auto-fill, minmax(${Math.min(300, Math.floor(100/nbGroups))}px, 1fr))`;
-
   zone.innerHTML=CLASSES_DEF.filter(cls=>groups[cls.id]).map(cls=>{
     const roles=groups[cls.id].sort((a,b)=>ROLES_DEF.findIndex(r=>r.id===a.rid)-ROLES_DEF.findIndex(r=>r.id===b.rid));
-    return `<div class="role-block" data-rid="${cls.id}">
+    // Calculer la largeur naturelle : titre + slots → min 200px, max 300px
+    return `<div class="role-block" style="flex:0 0 auto;min-width:200px;max-width:300px;width:auto;">
       <div class="role-block-header"><span class="role-block-label" style="color:${cls.color}">${cls.label}</span></div>
       ${roles.map(({rid,count})=>{
         const r=roleDef(rid)||{label:rid,color:'#aaa',unique:false};
         const assigned=assignments[rid]||[];const nSlots=visibleSlots(rid);
         const weapCnt={};assigned.forEach(a=>{if(a.weapon){const k=a.weapon.toLowerCase();weapCnt[k]=(weapCnt[k]||0)+1;}});
         const overCount=assigned.length>count;
-        // FIX #1 : data-rid sur le bloc de rôle pour le highlight précis
         let html=`<div class="role-block" data-rid="${rid}" style="background:transparent;border:none;padding:0;border-radius:0;margin-bottom:4px;"
           ondragover="onRoleBlockDragOver(event,'${rid}')"
           ondragleave="onRoleBlockDragLeave(event,'${rid}')"
@@ -931,7 +1054,6 @@ function renderComp(){
             const isDup=r.unique&&a.weapon&&(weapCnt[a.weapon.toLowerCase()]||0)>1;
             html+=`<div class="player-slot">${p?avatarEl(p.name,p.color||'#5865F2',22):'<div style="width:22px;height:22px;border-radius:50%;background:var(--bg3);flex-shrink:0;"></div>'}<span style="flex:1;font-weight:500;color:${r.color}">${p?p.name:'?'}</span><span class="slot-weapon" style="color:${isDup?'#f04747':'var(--text3)'};">${a.weapon||'—'}${isDup?' ⚠':''}</span><button class="btn btn-icon btn-danger" onclick="removeAssign('${rid}',${i})" style="margin-left:4px;font-size:10px;">✕</button></div>`;
           }else{
-            // FIX #1 : data-rid sur chaque empty-slot pour le highlight individuel
             html+=`<div class="empty-slot" data-rid="${rid}"
               ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over-slot')"
               ondragleave="this.classList.remove('drag-over-slot')"
@@ -944,12 +1066,15 @@ function renderComp(){
       }).join('')}
     </div>`;
   }).join('');
+
+  // Mettre à jour le camembert après rendu comp
+  renderCompPie();
 }
 
 async function removeAssign(rid,idx){
   const playerId=assignments[rid]?.[idx]?.playerId;if(assignments[rid])assignments[rid].splice(idx,1);
   if(currentEventId&&playerId)await sb.from('assignments').delete().eq('event_id',currentEventId).eq('role_id',rid).eq('discord_id',playerId);
-  renderComp();renderPresence();
+  renderComp();renderPresence();renderCompPie();
 }
 function addTempRole(){tempRoles.push({id:'temp-'+Date.now(),label:'Rôle temporaire'});renderTempZone();}
 function renderTempZone(){
@@ -1006,7 +1131,7 @@ async function confirmFloating(){
   if(!assignments[pendingRoleId])assignments[pendingRoleId]=[];
   assignments[pendingRoleId].push({playerId:pendingPlayerId,weapon});
   if(currentEventId){await sb.from('assignments').delete().eq('event_id',currentEventId).eq('discord_id',pendingPlayerId);await sb.from('assignments').insert({event_id:currentEventId,role_id:pendingRoleId,discord_id:pendingPlayerId,weapon:weapon});}
-  closeFloating();renderComp();renderPresence();
+  closeFloating();renderComp();renderPresence();renderCompPie();
 }
 function closeFloating(){document.getElementById('modal-assign').style.display='none';}
 document.addEventListener('click',e=>{const m=document.getElementById('modal-assign');if(m.style.display!=='none'&&!m.contains(e.target)&&!e.target.closest('.empty-slot')&&!e.target.closest('.temp-role-block'))closeFloating();});
