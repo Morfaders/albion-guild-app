@@ -82,11 +82,37 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 
 /* FIX #5 : Slot vide — highlight drag compatible / incompatible */
 .empty-slot{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;border:1px dashed var(--border2);font-size:12px;color:var(--text3);cursor:pointer;margin-bottom:3px;transition:all .15s;}
-.empty-slot:hover,.empty-slot.drag-over-slot{border-color:var(--accent);color:var(--accent);background:rgba(88,101,242,.05);}
-.drag-mode .empty-slot.slot-compatible{border-color:rgba(61,220,132,.7);color:#3ddc84;background:rgba(61,220,132,.07);animation:slotPulse 1.4s ease-in-out infinite;}
-.drag-mode .empty-slot.slot-incompatible{border-color:rgba(240,71,71,.4);color:#f04747;background:rgba(240,71,71,.04);opacity:.6;cursor:not-allowed;}
-.drag-mode .empty-slot.slot-compatible.drag-over-slot{background:rgba(61,220,132,.18)!important;border-color:#3ddc84!important;box-shadow:0 0 0 2px rgba(61,220,132,.3);}
-@keyframes slotPulse{0%,100%{box-shadow:none;}50%{box-shadow:0 0 6px rgba(61,220,132,.35);}}
+.empty-slot:hover:not(.slot-incompatible){border-color:var(--accent);color:var(--accent);background:rgba(88,101,242,.05);}
+
+/* Dès que drag-mode est actif, TOUS les slots compatibles s'illuminent */
+.drag-mode .empty-slot.slot-compatible{
+  border-color:rgba(61,220,132,.8);
+  color:#3ddc84;
+  background:rgba(61,220,132,.09);
+  box-shadow:0 0 0 1px rgba(61,220,132,.25);
+  animation:slotPulse 1.6s ease-in-out infinite;
+}
+/* Highlight fort quand la souris est DESSUS d'un slot compatible */
+.drag-mode .empty-slot.slot-compatible.drag-over-slot{
+  background:rgba(61,220,132,.22)!important;
+  border-color:#3ddc84!important;
+  box-shadow:0 0 0 3px rgba(61,220,132,.4), 0 0 14px rgba(61,220,132,.25)!important;
+  animation:none!important;
+  transform:scale(1.02);
+}
+/* Blocs de rôle compatibles — highlight global dès le début du drag */
+.drag-mode .role-block.drop-compatible{
+  border-color:rgba(61,220,132,.55)!important;
+  background:rgba(61,220,132,.05)!important;
+}
+/* Highlight fort du bloc quand on est dessus */
+.drag-mode .role-block.drop-over{
+  border-color:#3ddc84!important;
+  background:rgba(61,220,132,.12)!important;
+  box-shadow:0 0 0 2px rgba(61,220,132,.35)!important;
+}
+.drag-mode .empty-slot.slot-incompatible{border-color:rgba(240,71,71,.35);color:rgba(240,71,71,.5);background:transparent;opacity:.5;cursor:not-allowed;animation:none;}
+@keyframes slotPulse{0%,100%{box-shadow:0 0 0 1px rgba(61,220,132,.25);}50%{box-shadow:0 0 0 2px rgba(61,220,132,.5),0 0 8px rgba(61,220,132,.2);}}
 
 .temp-section{margin-top:20px;padding-top:16px;border-top:1px dashed var(--border2);}
 .temp-section-title{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:10px;}
@@ -773,30 +799,36 @@ async function confirmAddPlayer(){
   if(!name){alert('Le pseudo est requis.');return;}
   const palette=['#5ba4f5','#3ddc84','#f04747','#f07844','#b478f0','#7bcfb0','#e47fbf','#f0c040'];
   const color=palette[players.length%palette.length];
+
+  // Bouton de chargement
+  const confirmBtn=document.querySelector('#modal-player .btn-primary');
+  const originalText=confirmBtn?confirmBtn.textContent:'';
+  if(confirmBtn){confirmBtn.textContent='⏳ Création...';confirmBtn.disabled=true;}
+
   const{data,error}=await sb.from('players').insert({name,discord_id,color,roles:newSelected}).select().single();
+
+  if(confirmBtn){confirmBtn.textContent=originalText;confirmBtn.disabled=false;}
   if(error){alert('Erreur: '+error.message);return;}
+
   const newPlayer={...data,roles:data.roles||[]};
   players.push(newPlayer);
   closeAddModal();
   renderProfiles();
-  // FIX #8 : auto-identification si pas déjà identifié
-  if(!myDiscordId&&discord_id){
-    myDiscordId=discord_id;
-    localStorage.setItem('myDiscordId',discord_id);
-    myPlayer=newPlayer;
+
+  // FIX #8 : auto-identification TOUJOURS si pas déjà identifié — sans demander
+  if(!myDiscordId){
+    if(discord_id){
+      // A un discord_id → on s'identifie par discord_id
+      myDiscordId=discord_id;
+      localStorage.setItem('myDiscordId',discord_id);
+      myPlayer=newPlayer;
+    } else {
+      // Pas de discord_id → on identifie par id DB (session locale uniquement)
+      myPlayer=newPlayer;
+      localStorage.setItem('myPlayerId',String(newPlayer.id));
+    }
     renderSidebarIdentity();
     renderIdentityBanner();
-  } else if(!myDiscordId&&!discord_id){
-    // Pas de discord_id → proposer de s'identifier avec ce nouveau joueur
-    if(confirm(`Vous n'êtes pas encore identifié. Vous identifier en tant que "${name}" ?`)){
-      // On utilise l'id interne comme clé temporaire si pas de discord_id
-      // On le met dans la session locale via l'id DB
-      myPlayer=newPlayer;
-      // Stocker par id DB en fallback
-      localStorage.setItem('myPlayerId',String(newPlayer.id));
-      renderSidebarIdentity();
-      renderIdentityBanner();
-    }
   }
 }
 function closeAddModal(){document.getElementById('modal-player').classList.remove('open');}
@@ -893,7 +925,7 @@ function onRoleBlockDragLeave(e,rid){
   if(block&&!block.contains(e.relatedTarget))block.classList.remove('drop-over');
 }
 
-// FIX #6 : onRoleBlockDrop — TOUJOURS afficher la modale arme
+// FIX #6 : onRoleBlockDrop — assignation DIRECTE sans modale
 function onRoleBlockDrop(e,rid){
   e.preventDefault();e.stopPropagation();
   const pid=dragPlayerId||e.dataTransfer.getData('text/plain');
@@ -904,17 +936,18 @@ function onRoleBlockDrop(e,rid){
     if(block){block.style.transition='none';block.style.borderColor='#f04747';setTimeout(()=>{block.style.transition='';block.style.borderColor='';},600);}
     return;
   }
-  // Toujours demander l'arme — FIX #6
-  dragPendingRoleId=rid;
-  const p=players.find(pl=>pl.discord_id===pid);
-  const r=roleDef(rid);
-  document.getElementById('drag-weapon-title').innerHTML=`${avatarEl(p?p.name:'?',p?.color||'#5865F2',22)} <span>${p?p.name:'?'}</span> <span style="color:var(--text3);font-weight:400;font-size:14px;">→</span> <span style="color:${r?.color||'#aaa'}">${r?r.label:rid}</span>`;
-  // Pré-remplir si déjà assigné
-  const existingAssign=Object.values(assignments).flat().find(a=>a.playerId===pid);
-  document.getElementById('drag-weapon-input').value=existingAssign?.weapon||'';
-  document.getElementById('modal-drag-weapon').dataset.pid=pid;
-  document.getElementById('modal-drag-weapon').classList.add('open');
-  setTimeout(()=>document.getElementById('drag-weapon-input').focus(),80);
+  // Assigner directement sans arme
+  _doAssign(pid,rid,'');
+}
+
+async function _doAssign(pid,rid,weapon){
+  if(!pid||!rid||!currentEventId)return;
+  Object.keys(assignments).forEach(r=>{if(r!==rid)assignments[r]=(assignments[r]||[]).filter(a=>a.playerId!==pid);});
+  if(!assignments[rid])assignments[rid]=[];
+  assignments[rid].push({playerId:pid,weapon:weapon||''});
+  await sb.from('assignments').delete().eq('event_id',currentEventId).eq('discord_id',pid);
+  await sb.from('assignments').insert({event_id:currentEventId,role_id:rid,discord_id:pid,weapon:weapon||''});
+  renderComp();renderPresence();renderCompPie();
 }
 
 async function confirmDragAssign(){
@@ -922,13 +955,7 @@ async function confirmDragAssign(){
   const rid=dragPendingRoleId;
   const weapon=document.getElementById('drag-weapon-input').value.trim();
   closeDragWeaponModal();
-  if(!pid||!rid||!currentEventId)return;
-  Object.keys(assignments).forEach(r=>{if(r!==rid)assignments[r]=(assignments[r]||[]).filter(a=>a.playerId!==pid);});
-  if(!assignments[rid])assignments[rid]=[];
-  assignments[rid].push({playerId:pid,weapon});
-  await sb.from('assignments').delete().eq('event_id',currentEventId).eq('discord_id',pid);
-  await sb.from('assignments').insert({event_id:currentEventId,role_id:rid,discord_id:pid,weapon});
-  renderComp();renderPresence();renderCompPie();
+  await _doAssign(pid,rid,weapon);
 }
 function closeDragWeaponModal(){document.getElementById('modal-drag-weapon').classList.remove('open');}
 
