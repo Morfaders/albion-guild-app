@@ -70,19 +70,16 @@ async function buildEventEmbed(eventId) {
 
   const assignedIds = new Set((asgData||[]).map(a => a.discord_id));
 
-  // Présences — seulement ceux qui ont répondu
-  const sortByStatus = (a, b) => {
-    const o = { present:0, maybe:1, absent:2 };
-    return ((o[presence[a.discord_id]]??9) - (o[presence[b.discord_id]]??9)) || a.name.localeCompare(b.name);
-  };
-
   const stIco = (id) => {
     const s = presence[id];
     return s==='present'?'🟢':s==='maybe'?'🟡':s==='absent'?'❌':null;
   };
 
-  const free = (players||[]).filter(p => !assignedIds.has(p.discord_id) && presence[p.discord_id]).sort(sortByStatus);
-  const assigned = (players||[]).filter(p => assignedIds.has(p.discord_id) && presence[p.discord_id]).sort(sortByStatus);
+  const free = (players||[]).filter(p => !assignedIds.has(p.discord_id) && presence[p.discord_id]).sort((a,b) => {
+    const o = { present:0, maybe:1, absent:2 };
+    return ((o[presence[a.discord_id]]??9) - (o[presence[b.discord_id]]??9)) || a.name.localeCompare(b.name);
+  });
+  const assigned = (players||[]).filter(p => assignedIds.has(p.discord_id) && presence[p.discord_id]).sort((a,b) => a.name.localeCompare(b.name));
 
   const counts = { present:0, maybe:0, absent:0 };
   (presData||[]).forEach(p => { if(counts[p.status]!==undefined) counts[p.status]++; });
@@ -96,17 +93,12 @@ async function buildEventEmbed(eventId) {
   }
   if(!presenceStr) presenceStr = '_Aucune réponse pour l\'instant_';
 
-  // Composition — tous les slots, couleurs de classe, slots vides affichés
   let compStr = '';
   if(event.comp_id) {
     const { data: comp } = await supabase.from('comps').select('*').eq('id', event.comp_id).single();
     if(comp && comp.slots) {
-
-      // Calcul de la largeur de la colonne rôle = longueur du label le plus long dans cette comp
       const activeRoles = (roles||[]).filter(r => comp.slots[r.id] && comp.slots[r.id].count > 0);
       const roleColWidth = Math.max(...activeRoles.map(r => r.label.length), 4);
-
-      // Calcul de la largeur de la colonne nom = nom de joueur le plus long assigné
       const allAssignedPlayerNames = Object.values(assignments)
         .flat()
         .map(a => { const p = (players||[]).find(pl => pl.discord_id === a.discordId); return p ? p.name : '?'; });
@@ -120,17 +112,13 @@ async function buildEventEmbed(eventId) {
           const count = comp.slots[r.id].count || 0;
           const asgn = assignments[r.id] || [];
           const totalLines = Math.max(count, asgn.length);
-
-          // Colonne rôle : largeur dynamique, répété sur chaque ligne
           const roleLabel = r.label.padEnd(roleColWidth);
-
           for(let i = 0; i < totalLines; i++) {
             const a = asgn[i];
             const label = roleLabel;
             if(a) {
               const p = (players||[]).find(pl => pl.discord_id === a.discordId);
               const name = (p ? p.name : '?').padEnd(nameColWidth);
-              // Nom ET arme dans le même bloc code pour alignement monospace
               const weapon = a.weapon ? ` — ${a.weapon}` : '';
               compStr += `${clsEmoji} \`${label}  ${name}${weapon}\`\n`;
             } else {
@@ -194,6 +182,54 @@ async function updateEventMessage(eventId) {
   }
 }
 
+// ─── NOUVEAU : DM privé pour utilisateur inconnu ──────────────────────────────
+async function sendUnknownUserDM(discordUser, eventId) {
+  try {
+    const webAppUrl = process.env.WEBAPP_URL || 'https://ton-app.com';
+    // Lien direct vers la web app avec discord_id pré-rempli ET new_player=1 pour ouvrir la modale
+    const createProfileUrl = `${webAppUrl}?event_id=${eventId}&new_player=1&discord_id=${discordUser.id}`;
+
+    const embed = new EmbedBuilder()
+      .setTitle('👋 Bienvenue dans la guilde !')
+      .setColor(0xf0c040)
+      .setDescription(
+        `Tu as répondu à un événement, mais **tu n'as pas encore de fiche joueur** dans notre système.\n\n` +
+        `Pour que le raid lead puisse t'inclure dans la composition, crée ta fiche en 30 secondes :`
+      )
+      .addFields(
+        {
+          name: '📋 Ce qu\'il faut faire',
+          value:
+            '**1.** Clique sur le bouton ci-dessous\n' +
+            '**2.** Entre ton pseudo en jeu\n' +
+            '**3.** Coche les rôles que tu joues\n' +
+            '**4.** Clique sur **Ajouter** — c\'est tout !',
+          inline: false
+        },
+        {
+          name: '🔗 Ton ID Discord',
+          value: `\`${discordUser.id}\` *(déjà pré-rempli dans le formulaire)*`,
+          inline: false
+        }
+      )
+      .setFooter({ text: 'Ce message t\'est envoyé uniquement parce que ton Discord ID n\'est pas encore lié à un profil.' });
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel('✏️ Créer ma fiche joueur')
+        .setStyle(ButtonStyle.Link)
+        .setURL(createProfileUrl)
+    );
+
+    await discordUser.send({ embeds: [embed], components: [row] });
+    console.log(`DM envoyé à ${discordUser.tag} (${discordUser.id})`);
+  } catch(err) {
+    // L'utilisateur a peut-être les DMs désactivés
+    console.warn(`Impossible d'envoyer un DM à ${discordUser.tag}: ${err.message}`);
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 client.once('ready', async () => {
   console.log(`Bot connecte : ${client.user.tag}`);
   await registerCommands();
@@ -220,7 +256,12 @@ client.on('interactionCreate', async interaction => {
       if(player) {
         return interaction.reply({ content: `👤 **${player.name}**\nRoles : ${player.roles.length > 0 ? player.roles.join(', ') : 'aucun role defini'}`, ephemeral: true });
       } else {
-        return interaction.reply({ content: `❌ Tu n'as pas encore de profil. Un raid lead doit t'ajouter via la web app.`, ephemeral: true });
+        const webAppUrl = process.env.WEBAPP_URL || 'https://ton-app.com';
+        const createProfileUrl = `${webAppUrl}?new_player=1&discord_id=${discordId}`;
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setLabel('✏️ Créer ma fiche').setStyle(ButtonStyle.Link).setURL(createProfileUrl)
+        );
+        return interaction.reply({ content: `❌ Tu n'as pas encore de profil.\nClique ci-dessous pour en créer un (ton ID Discord sera pré-rempli).`, components: [row], ephemeral: true });
       }
     }
 
@@ -241,8 +282,6 @@ client.on('interactionCreate', async interaction => {
         new ButtonBuilder()
           .setLabel('🛠 Gérer la comp')
           .setStyle(ButtonStyle.Link)
-          // FIX 5 : on n'inclut pas l'ID ici car le bouton Link est générique pour tout le monde.
-          // L'ID sera injecté dynamiquement via les boutons de présence (voir plus bas).
           .setURL(`${process.env.WEBAPP_URL}?event_id=${event.id}`)
       );
 
@@ -260,7 +299,23 @@ client.on('interactionCreate', async interaction => {
     const discordId = interaction.user.id;
     await interaction.deferUpdate();
 
-    await supabase.from('presences').upsert({ event_id: eventId, discord_id: discordId, status: action });
+    // ─── NOUVEAU : vérifier si le joueur existe ───────────────────────────────
+    const { data: existingPlayer } = await supabase
+      .from('players')
+      .select('id')
+      .eq('discord_id', discordId)
+      .maybeSingle();
+
+    if(!existingPlayer) {
+      // Enregistrer quand même la présence pour le comptage
+      await supabase.from('presences').upsert({ event_id: eventId, discord_id: discordId, status: action });
+      // Envoyer un DM pour créer sa fiche
+      await sendUnknownUserDM(interaction.user, eventId);
+    } else {
+      await supabase.from('presences').upsert({ event_id: eventId, discord_id: discordId, status: action });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     await updateEventMessage(eventId);
   }
 });

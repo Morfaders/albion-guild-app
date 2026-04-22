@@ -26,7 +26,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
 .channel-header{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
 .channel-name{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;letter-spacing:.04em;}
-.content{padding:20px;flex:1;max-width:980px;width:100%;}
+/* FIX #4 : contenu pleine largeur en vue événement */
+.content{padding:20px;flex:1;width:100%;}
+.content.event-layout{max-width:100%;}
+.content:not(.event-layout){max-width:980px;}
 .view{display:none;}.view.active{display:block;}
 .btn{padding:7px 14px;border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;font-family:'Inter',sans-serif;background:var(--bg3);color:var(--text);transition:all .12s;}
 .btn:hover{background:var(--bg4);}
@@ -45,8 +48,17 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .player-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;transition:border-color .15s;}
 .player-card:hover{border-color:var(--border2);}
 .role-pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;}
-.presence-bar{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:14px;}
-.presence-bar-title{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--text2);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;}
+
+/* ── PRESENCE BAR ── */
+.presence-bar{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:14px;transition:all .2s;}
+.presence-bar-title{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--text2);text-transform:uppercase;display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:0;}
+/* FIX #5 : bouton toggle présences */
+.presence-toggle-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;font-size:11px;color:var(--text2);cursor:pointer;transition:all .12s;user-select:none;margin-left:auto;}
+.presence-toggle-btn:hover{background:var(--bg4);color:var(--text);}
+.presence-list-wrap{overflow:hidden;transition:max-height .3s ease,opacity .3s ease;}
+.presence-list-wrap.collapsed{max-height:0!important;opacity:0;pointer-events:none;}
+.presence-list-wrap.expanded{opacity:1;}
+
 /* Chips draggables */
 .presence-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);font-size:12px;color:var(--text2);cursor:grab;user-select:none;transition:opacity .15s,box-shadow .15s;}
 .presence-chip:active{cursor:grabbing;}
@@ -54,7 +66,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .chip-flag{cursor:pointer;font-size:10px;opacity:.4;margin-left:2px;transition:opacity .1s;}
 .chip-flag:hover{opacity:1;}
 .chip-flag.on{opacity:1;color:#f0c040;}
-.comp-zone{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
+
+/* FIX #4 : comp zone pleine largeur */
+.comp-zone{display:grid;gap:12px;}
+
 /* Blocs de rôle avec états drag */
 .role-block{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;transition:border-color .18s,background .18s,box-shadow .18s;}
 .role-block.drop-compatible{border-color:rgba(61,220,132,.5);background:rgba(61,220,132,.04);}
@@ -65,8 +80,18 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .player-slot{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;margin-bottom:3px;font-size:13px;}
 .player-slot:hover{background:var(--bg3);}
 .slot-weapon{font-family:'IBM Plex Mono',monospace;font-size:11px;}
-.empty-slot{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;border:1px dashed var(--border2);font-size:12px;color:var(--text3);cursor:pointer;margin-bottom:3px;transition:all .12s;}
+
+/* FIX #1 : Slot vide — état neutre / highlight drag compatible / incompatible */
+.empty-slot{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;border:1px dashed var(--border2);font-size:12px;color:var(--text3);cursor:pointer;margin-bottom:3px;transition:all .15s;}
 .empty-slot:hover,.empty-slot.drag-over-slot{border-color:var(--accent);color:var(--accent);background:rgba(88,101,242,.05);}
+/* Highlight vert quand drag en cours + compatible */
+.drag-mode .empty-slot.slot-compatible{border-color:rgba(61,220,132,.7);color:#3ddc84;background:rgba(61,220,132,.07);animation:slotPulse 1.4s ease-in-out infinite;}
+/* Highlight rouge quand drag en cours + incompatible */
+.drag-mode .empty-slot.slot-incompatible{border-color:rgba(240,71,71,.4);color:#f04747;background:rgba(240,71,71,.04);opacity:.6;cursor:not-allowed;}
+/* Sur-highlight au drop */
+.drag-mode .empty-slot.slot-compatible.drag-over-slot{background:rgba(61,220,132,.18)!important;border-color:#3ddc84!important;box-shadow:0 0 0 2px rgba(61,220,132,.3);}
+@keyframes slotPulse{0%,100%{box-shadow:none;}50%{box-shadow:0 0 6px rgba(61,220,132,.35);}}
+
 .temp-section{margin-top:20px;padding-top:16px;border-top:1px dashed var(--border2);}
 .temp-section-title{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:10px;}
 .temp-role-block{background:var(--bg2);border:1px dashed var(--border2);border-radius:var(--r2);padding:12px;margin-bottom:8px;}
@@ -131,6 +156,15 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
 .player-search-input::placeholder{color:var(--text3);}
 .modal-section-sep{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin:14px 0 8px;}
 .mobile-bottom-nav{display:none;}
+
+/* FIX #6 : édition titre événement inline */
+.event-title-wrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.event-edit-btn{padding:3px 8px;background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-size:11px;cursor:pointer;transition:all .12s;}
+.event-edit-btn:hover{background:var(--bg3);color:var(--text);border-color:var(--border2);}
+.event-title-input{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;background:transparent;border:1px solid var(--accent);border-radius:6px;color:var(--text);padding:2px 8px;outline:none;width:300px;}
+.event-date-input{font-family:'Inter',sans-serif;font-size:13px;background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--text2);padding:3px 8px;outline:none;width:220px;}
+.event-date-input:focus{border-color:var(--accent);}
+
 @media(max-width:768px){
   .sidebar{display:none!important;}
   .app{flex-direction:column;height:100vh;}
@@ -150,9 +184,7 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
 .admin-lock-input.error{border-color:#f04747;animation:shake .3s ease;}
 @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
 #view-comps,#view-classes{position:relative;}
-/* Ghost drag flottant */
 #drag-ghost{position:fixed;pointer-events:none;z-index:9999;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;box-shadow:0 8px 24px rgba(0,0,0,.6);opacity:0;transition:opacity .1s;top:0;left:0;}
-/* Hint drag */
 .drag-active-hint{display:none;font-size:10px;color:#3ddc84;font-weight:500;font-family:'Inter',sans-serif;}
 .drag-mode .drag-active-hint{display:inline;}
 </style>
@@ -187,7 +219,7 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
 
   <div class="main">
     <div class="channel-header"><span id="ch-icon">👤</span><span class="channel-name" id="ch-name">profils-joueurs</span></div>
-    <div class="content">
+    <div class="content" id="main-content">
 
       <div class="view active" id="view-profiles">
         <div class="section-head"><div class="section-title">Profils joueurs</div><button class="btn btn-primary btn-sm" onclick="openAddPlayer()">+ Ajouter</button></div>
@@ -201,23 +233,51 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
 
       <div class="view" id="view-event">
         <div id="identity-banner-el"></div>
+
+        <!-- FIX #6 : Bandeau événement avec bouton éditer -->
         <div id="event-banner" style="background:linear-gradient(135deg,#1a1f30,#1e2738);border:1px solid var(--border2);border-radius:var(--r2);padding:20px;margin-bottom:16px;">
-          <div style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;" id="event-title">⚔️ Événement</div>
-          <div style="font-size:13px;color:var(--text2);margin-top:4px;" id="event-subtitle"><span id="present-count">0 présents</span></div>
+          <div id="event-title-display">
+            <div class="event-title-wrap">
+              <div style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;" id="event-title">⚔️ Événement</div>
+              <button class="event-edit-btn" onclick="toggleEventEdit()" id="event-edit-toggle-btn" title="Modifier titre et date">✏️ Modifier</button>
+            </div>
+            <div style="font-size:13px;color:var(--text2);margin-top:4px;" id="event-subtitle"><span id="present-count">0 présents</span></div>
+          </div>
+          <div id="event-edit-form" style="display:none;margin-top:10px;">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <input id="event-title-edit" class="event-title-input" placeholder="Titre de l'événement">
+              <input id="event-date-edit" class="event-date-edit weapon-input" placeholder="Date et heure (ex: Vendredi 20h30)" style="font-family:'Inter',sans-serif;font-size:13px;">
+              <div style="display:flex;gap:8px;margin-top:4px;">
+                <button class="btn btn-primary btn-sm" onclick="saveEventEdit()">💾 Sauvegarder</button>
+                <button class="btn btn-sm" onclick="toggleEventEdit()">Annuler</button>
+              </div>
+            </div>
+          </div>
           <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-success btn-sm" onclick="setMyPresence('present')">✓ Je suis là</button>
             <button class="btn btn-warning btn-sm" onclick="setMyPresence('maybe')">? Peut-être</button>
             <button class="btn btn-danger btn-sm" onclick="setMyPresence('absent')">✕ Absent</button>
           </div>
         </div>
+
+        <!-- FIX #5 : Présences réductibles -->
         <div class="presence-bar" id="presence-bar-el">
           <div class="presence-bar-title">
             Présences
-            <span style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;">— glissez un nom sur un rôle · ⚑ doute</span>
-            <span class="drag-active-hint">🟢 déposez sur un rôle compatible</span>
+            <span id="presence-count-inline" style="font-size:11px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;"></span>
+            <span style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;" id="presence-drag-hint">— glissez un nom sur un rôle · ⚑ doute</span>
+            <span class="drag-active-hint">🟢 déposez sur un slot compatible</span>
+            <div class="presence-toggle-btn" onclick="togglePresenceList()" id="presence-toggle-btn">
+              <span id="presence-toggle-icon">▼</span>
+              <span id="presence-toggle-label">Afficher</span>
+            </div>
           </div>
-          <div id="presence-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+          <!-- Wrap collapsible : réduit par défaut -->
+          <div class="presence-list-wrap collapsed" id="presence-list-wrap" style="max-height:0;">
+            <div id="presence-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
+          </div>
         </div>
+
         <div class="section-head" style="margin-top:4px;">
           <div class="section-title">Composition</div>
           <div style="display:flex;gap:8px;align-items:center;"><div id="event-comp-info"></div><button class="btn btn-sm" onclick="addTempRole()">+ Rôle temp.</button></div>
@@ -283,7 +343,7 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
   </div>
 </div>
 
-<!-- Ajout joueur — discord ID OPTIONNEL -->
+<!-- Ajout joueur — discord ID OPTIONNEL (FIX #3) -->
 <div id="modal-player" class="modal">
   <div class="modal-box">
     <div class="modal-title">Nouveau joueur</div>
@@ -358,10 +418,14 @@ let currentComp=null,editingComp=null,editCompIdx=0,editingPlayerId=null;
 let newSelected=[],currentFilter='alpha';
 let pendingRoleId=null,pendingPlayerId=null,pendingIsTemp=false,pendingTempId=null;
 let currentEventId=null;
+// FIX #5 : état liste présences (réduite par défaut)
+let presenceListExpanded=false;
+// FIX #6 : état édition événement
+let currentEventData=null;
 
 // --- DRAG STATE ---
-let dragPlayerId=null;    // discord_id du joueur qu'on glisse
-let dragPendingRoleId=null; // rôle cible après le drop
+let dragPlayerId=null;
+let dragPendingRoleId=null;
 
 // --- ADMIN ---
 const ADMIN_PASSWORD='Adminitracteur';
@@ -427,7 +491,6 @@ async function init(){
   document.getElementById('app').style.display='flex';
   renderProfiles();
   if(currentEventId)showView('event');
-  // Si new_player=1 → ouvrir modale ajout avec discord_id pré-rempli
   if(params.get('new_player')==='1'){
     setTimeout(()=>openAddPlayer(params.get('discord_id')||''),300);
   }
@@ -452,8 +515,10 @@ async function loadEventData(eventId){
   flagged=new Set((flagData||[]).map(f=>f.discord_id));
   const{data:event}=await sb.from('events').select('*').eq('id',eventId).single();
   if(event){
+    currentEventData=event;
     document.getElementById('event-title').textContent='⚔️ '+event.title;
-    document.getElementById('event-subtitle').innerHTML=(event.event_date||'')+' — <span id="present-count">0 présents</span>';
+    const presentCount=Object.values(presence).filter(v=>v==='present').length;
+    document.getElementById('event-subtitle').innerHTML=(event.event_date||'')+' — <span id="present-count">'+presentCount+' présents</span>';
     if(event.comp_id){const comp=comps.find(c=>c.id===event.comp_id);if(comp)currentComp=JSON.parse(JSON.stringify(comp));}
     renderEventCompBadge(event.comp_id);
   }
@@ -465,6 +530,69 @@ function renderEventCompBadge(compId){
   el.innerHTML=comp?`<div class="comp-badge">🗂 Comp : <span class="comp-badge-name">${comp.name}</span></div>`:'<span style="font-size:12px;color:var(--text3);">Comp introuvable</span>';
 }
 
+// --- FIX #6 : Édition titre/date événement ---
+function toggleEventEdit(){
+  const form=document.getElementById('event-edit-form');
+  const titleDisplay=document.getElementById('event-title-display');
+  const isOpen=form.style.display!=='none';
+  if(!isOpen){
+    // Ouvrir
+    if(currentEventData){
+      document.getElementById('event-title-edit').value=currentEventData.title||'';
+      document.getElementById('event-date-edit').value=currentEventData.event_date||'';
+    }
+    form.style.display='block';
+    document.getElementById('event-edit-toggle-btn').textContent='✕ Annuler';
+    setTimeout(()=>document.getElementById('event-title-edit').focus(),50);
+  } else {
+    // Fermer
+    form.style.display='none';
+    document.getElementById('event-edit-toggle-btn').textContent='✏️ Modifier';
+  }
+}
+async function saveEventEdit(){
+  if(!currentEventId)return;
+  const newTitle=document.getElementById('event-title-edit').value.trim();
+  const newDate=document.getElementById('event-date-edit').value.trim();
+  if(!newTitle)return;
+  const{error}=await sb.from('events').update({title:newTitle,event_date:newDate||null}).eq('id',currentEventId);
+  if(error){alert('Erreur: '+error.message);return;}
+  currentEventData={...currentEventData,title:newTitle,event_date:newDate};
+  document.getElementById('event-title').textContent='⚔️ '+newTitle;
+  const presentCount=Object.values(presence).filter(v=>v==='present').length;
+  document.getElementById('event-subtitle').innerHTML=(newDate||'')+' — <span id="present-count">'+presentCount+' présents</span>';
+  // Fermer le formulaire
+  document.getElementById('event-edit-form').style.display='none';
+  document.getElementById('event-edit-toggle-btn').textContent='✏️ Modifier';
+  // Feedback
+  const btn=document.querySelector('[onclick="saveEventEdit()"]');
+  if(btn){const o=btn.textContent;btn.textContent='✓ Sauvegardé';setTimeout(()=>btn.textContent=o,1500);}
+}
+
+// --- FIX #5 : Toggle liste présences ---
+function togglePresenceList(){
+  presenceListExpanded=!presenceListExpanded;
+  const wrap=document.getElementById('presence-list-wrap');
+  const icon=document.getElementById('presence-toggle-icon');
+  const label=document.getElementById('presence-toggle-label');
+  const hint=document.getElementById('presence-drag-hint');
+  if(presenceListExpanded){
+    wrap.classList.remove('collapsed');
+    wrap.classList.add('expanded');
+    wrap.style.maxHeight=wrap.scrollHeight+200+'px';
+    icon.textContent='▲';
+    label.textContent='Réduire';
+    if(hint)hint.style.display='inline';
+  } else {
+    wrap.classList.add('collapsed');
+    wrap.classList.remove('expanded');
+    wrap.style.maxHeight='0';
+    icon.textContent='▼';
+    label.textContent='Afficher';
+    if(hint)hint.style.display='none';
+  }
+}
+
 // --- HELPERS ---
 function getInitials(n){return n.slice(0,2).toUpperCase();}
 function roleDef(id){return ROLES_DEF.find(r=>r.id===id);}
@@ -473,7 +601,6 @@ function avatarEl(name,color,size=34){return `<div style="width:${size}px;height
 function visibleSlots(rid){const s=currentComp?.slots?.[rid];const count=s?s.count:0;const strict=s?s.strict:false;const assigned=(assignments[rid]||[]).length;if(strict)return count;return Math.max(count,assigned+1);}
 function getAssignedRole(pid){for(const[rid,arr]of Object.entries(assignments)){if(arr.some(a=>a.playerId===pid))return roleDef(rid);}return null;}
 function presenceStatusText(discordId){const s=presence[discordId]||'none';if(s==='present')return{ico:'🟢',txt:'Disponible',color:'#3ddc84'};if(s==='maybe')return{ico:'🟡',txt:'Peut-être',color:'#f0c040'};if(s==='absent')return{ico:'🔴',txt:'Absent',color:'#f04747'};return{ico:'⚫',txt:'?',color:'var(--text3)'};}
-// Est-ce que ce joueur peut jouer ce rôle ?
 function playerCanPlayRole(discordId,rid){
   const p=players.find(pl=>pl.discord_id===discordId);if(!p)return false;
   const r=roleDef(rid);if(!r)return false;
@@ -493,6 +620,9 @@ function _doShowView(v){
   const mob=document.getElementById('mob-nav-'+v);if(mob)mob.classList.add('active');
   const[ico,name]=CH_META[v]||['📋',v];
   document.getElementById('ch-icon').textContent=ico;document.getElementById('ch-name').textContent=name;
+  // FIX #4 : contenu pleine largeur en vue événement
+  const content=document.getElementById('main-content');
+  if(v==='event'){content.classList.add('event-layout');}else{content.classList.remove('event-layout');}
   if(v==='profiles')renderProfiles();if(v==='event')renderEvent();if(v==='comps')renderCompEditor();if(v==='classes')renderClassesEditor();
 }
 
@@ -552,7 +682,7 @@ async function savePlayerRoles(){
 }
 function closeEditModal(){document.getElementById('modal-edit-player').classList.remove('open');}
 
-// openAddPlayer : preDiscordId optionnel (depuis lien bot Discord)
+// FIX #3 : openAddPlayer — discord_id optionnel, null en DB (pas de 0)
 function openAddPlayer(preDiscordId=''){
   newSelected=[];
   document.getElementById('new-name').value='';
@@ -567,11 +697,13 @@ function toggleNewRole(el,rid,color){
 }
 async function confirmAddPlayer(){
   const name=document.getElementById('new-name').value.trim();
-  const discord_id=document.getElementById('new-discord-id').value.trim();
+  // FIX #3 : discord_id vide = null, jamais 0
+  const discordRaw=document.getElementById('new-discord-id').value.trim();
+  const discord_id=discordRaw||null;
   if(!name){alert('Le pseudo est requis.');return;}
   const palette=['#5ba4f5','#3ddc84','#f04747','#f07844','#b478f0','#7bcfb0','#e47fbf','#f0c040'];
   const color=palette[players.length%palette.length];
-  const{data,error}=await sb.from('players').insert({name,discord_id:discord_id||null,color,roles:newSelected}).select().single();
+  const{data,error}=await sb.from('players').insert({name,discord_id,color,roles:newSelected}).select().single();
   if(error){alert('Erreur: '+error.message);return;}
   players.push({...data,roles:data.roles||[]});closeAddModal();renderProfiles();
 }
@@ -603,34 +735,49 @@ function showPlayerRolesPopup(e,playerDiscordId,playerName,chipColor){
 }
 
 // =============================================
-//  DRAG & DROP : chip présence → rôle de comp
+//  FIX #1 : DRAG & DROP avec highlight précis
 // =============================================
 function startPresenceDrag(e,discordId,playerName,color){
   dragPlayerId=discordId;
   e.dataTransfer.effectAllowed='move';
   e.dataTransfer.setData('text/plain',discordId);
-  // Ghost
   const ghost=document.getElementById('drag-ghost');
   ghost.innerHTML=`${avatarEl(playerName,color,20)}<span style="color:${color};">${playerName}</span>`;
   ghost.style.opacity='1';
-  // Highlight des blocs compatibles/incompatibles
-  const slots=currentComp?.slots||{};
+
+  // FIX #1 : highlight des SLOTS individuels + des role-blocks parents
   document.querySelectorAll('.role-block[data-rid]').forEach(block=>{
     const rid=block.dataset.rid;
+    // Blocs classe (pas des rôles) — on ignore
+    if(CLASSES_DEF.find(c=>c.id===rid))return;
+    const slots=currentComp?.slots||{};
     if(!slots[rid]||!slots[rid].count){block.classList.remove('drop-compatible','drop-incompatible');return;}
     const ok=playerCanPlayRole(discordId,rid);
     block.classList.toggle('drop-compatible',ok);
     block.classList.toggle('drop-incompatible',!ok);
   });
+
+  // FIX #1 : Marquer les empty-slots individuels
+  document.querySelectorAll('.empty-slot').forEach(slot=>{
+    const rid=slot.dataset.rid||slot.closest('[data-rid]')?.dataset?.rid;
+    if(!rid)return;
+    if(CLASSES_DEF.find(c=>c.id===rid))return;
+    const ok=playerCanPlayRole(discordId,rid);
+    slot.classList.toggle('slot-compatible',ok);
+    slot.classList.toggle('slot-incompatible',!ok);
+  });
+
   document.getElementById('presence-bar-el').classList.add('drag-mode');
 }
 function endPresenceDrag(){
   dragPlayerId=null;
   document.getElementById('drag-ghost').style.opacity='0';
   document.querySelectorAll('.role-block').forEach(b=>b.classList.remove('drop-compatible','drop-incompatible','drop-over'));
+  // FIX #1 : retirer les classes slot
+  document.querySelectorAll('.empty-slot').forEach(s=>s.classList.remove('slot-compatible','slot-incompatible','drag-over-slot'));
   document.getElementById('presence-bar-el').classList.remove('drag-mode');
 }
-// Suivi du ghost avec la souris
+
 document.addEventListener('dragover',e=>{
   const ghost=document.getElementById('drag-ghost');
   if(ghost.style.opacity==='1'){ghost.style.left=(e.clientX+14)+'px';ghost.style.top=(e.clientY-10)+'px';}
@@ -647,7 +794,6 @@ function onRoleBlockDragOver(e,rid){
   }
 }
 function onRoleBlockDragLeave(e,rid){
-  // Ne retire drop-over que si on quitte vraiment le bloc
   const block=document.querySelector(`.role-block[data-rid="${rid}"]`);
   if(block&&!block.contains(e.relatedTarget))block.classList.remove('drop-over');
 }
@@ -657,12 +803,10 @@ function onRoleBlockDrop(e,rid){
   endPresenceDrag();
   if(!pid||!currentEventId)return;
   if(!playerCanPlayRole(pid,rid)){
-    // Petit feedback visuel — on ne bloque pas avec un alert
     const block=document.querySelector(`.role-block[data-rid="${rid}"]`);
     if(block){block.style.transition='none';block.style.borderColor='#f04747';setTimeout(()=>{block.style.transition='';block.style.borderColor='';},600);}
     return;
   }
-  // Ouvrir modale arme
   dragPendingRoleId=rid;
   const p=players.find(pl=>pl.discord_id===pid);
   const r=roleDef(rid);
@@ -679,7 +823,6 @@ async function confirmDragAssign(){
   const weapon=document.getElementById('drag-weapon-input').value.trim();
   closeDragWeaponModal();
   if(!pid||!rid||!currentEventId)return;
-  // Retirer le joueur de ses autres rôles
   Object.keys(assignments).forEach(r=>{if(r!==rid)assignments[r]=(assignments[r]||[]).filter(a=>a.playerId!==pid);});
   if(!assignments[rid])assignments[rid]=[];
   assignments[rid].push({playerId:pid,weapon});
@@ -689,35 +832,57 @@ async function confirmDragAssign(){
 }
 function closeDragWeaponModal(){document.getElementById('modal-drag-weapon').classList.remove('open');}
 
+// FIX #5 : renderPresence — filtre les non-répondants quand réduit
 function renderPresence(){
   const o={present:0,maybe:1,none:2,absent:3};
   const sortFn=(a,b)=>{const pa=o[presence[a.discord_id]||'none'],pb=o[presence[b.discord_id]||'none'];if(pa!==pb)return pa-pb;return a.name.localeCompare(b.name);};
   const assignedIds=new Set(Object.values(assignments).flat().map(a=>a.playerId));
   const clsOrder=(p)=>{const r=getAssignedRole(p.discord_id);if(!r)return 999;return CLASSES_DEF.findIndex(c=>c.id===r.cls);};
   const assignedSortFn=(a,b)=>{const ca=clsOrder(a),cb=clsOrder(b);if(ca!==cb)return ca-cb;return a.name.localeCompare(b.name);};
-  const free=players.filter(p=>!assignedIds.has(p.discord_id)).sort(sortFn);
+
+  // Présents/peut-être/absents (ont répondu)
+  const responded=players.filter(p=>presence[p.discord_id]);
+  const notResponded=players.filter(p=>!presence[p.discord_id]);
+
+  const free=responded.filter(p=>!assignedIds.has(p.discord_id)).sort(sortFn);
+  const freeNoReply=notResponded.filter(p=>!assignedIds.has(p.discord_id)).sort(sortFn);
   const assigned=players.filter(p=>assignedIds.has(p.discord_id)).sort(assignedSortFn);
 
-  const makeChip=(p,useStatusColor,assignedRole)=>{
+  const makeChip=(p,useStatusColor,assignedRole,dimmed=false)=>{
     const st=presence[p.discord_id]||'none';const isFlagged=flagged.has(p.discord_id);const isMe=p.discord_id===myDiscordId;
     let border,bg,color,avatarColor;
     if(useStatusColor){const s=getStatusStyle(st);border=s.border;bg=s.bg;color=s.color;avatarColor=s.color;}
     else{const r=assignedRole;const cls=r&&r.cls?classDef(r.cls):null;const c=cls?cls.color:(r?r.color:'#8b92a8');border=c+'55';bg=c+'12';color=c;avatarColor=c;}
+    if(dimmed){border='rgba(255,255,255,0.06)';bg='transparent';color='var(--text3)';avatarColor='var(--text3)';}
     const meStyle=isMe?'box-shadow:0 0 0 2px rgba(255,255,255,0.35);':'';
     const avHtml=`<div style="width:18px;height:18px;border-radius:50%;background:${avatarColor}22;color:${avatarColor};display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:7px;flex-shrink:0;">${getInitials(p.name)}</div>`;
     const safeN=p.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    // Draggable seulement si le joueur a un discord_id (nécessaire pour l'assigner en DB)
-    const drag=p.discord_id?`draggable="true" ondragstart="startPresenceDrag(event,'${p.discord_id}','${safeN}','${color}')" ondragend="endPresenceDrag()"`:'' ;
-    return `<div class="presence-chip" style="border-color:${border};background:${bg};color:${color};${meStyle}" ${drag} onclick="showPlayerRolesPopup(event,'${p.discord_id||''}','${safeN}','${color}')">${avHtml}<span>${p.name}${isMe?' <span style="font-size:9px;opacity:.6;">(moi)</span>':''}</span><span class="chip-flag ${isFlagged?'on':''}" title="Marquer un doute" onclick="toggleFlag(event,'${p.discord_id||''}')">⚑</span></div>`;
+    const drag=p.discord_id&&!dimmed?`draggable="true" ondragstart="startPresenceDrag(event,'${p.discord_id}','${safeN}','${color}')" ondragend="endPresenceDrag()"`:'' ;
+    return `<div class="presence-chip" style="border-color:${border};background:${bg};color:${color};${dimmed?'opacity:.45;':''}${meStyle}" ${drag} onclick="showPlayerRolesPopup(event,'${p.discord_id||''}','${safeN}','${color}')">${avHtml}<span>${p.name}${isMe?' <span style="font-size:9px;opacity:.6;">(moi)</span>':''}</span><span class="chip-flag ${isFlagged?'on':''}" title="Marquer un doute" onclick="toggleFlag(event,'${p.discord_id||''}')">⚑</span></div>`;
   };
 
   const freeHtml=free.map(p=>makeChip(p,true,null)).join('');
+  // Joueurs sans réponse — toujours affichés mais plus discrets
+  const noReplyHtml=freeNoReply.map(p=>makeChip(p,true,null,true)).join('');
   let assignedHtml='';
   if(assigned.length){assignedHtml=`<div style="width:100%;height:1px;background:var(--border2);margin:8px 0 6px;position:relative;"><span style="position:absolute;left:50%;transform:translateX(-50%) translateY(-50%);background:var(--bg2);padding:0 8px;font-size:10px;color:var(--text3);white-space:nowrap;">en comp</span></div>`+assigned.map(p=>{const r=getAssignedRole(p.discord_id);return makeChip(p,false,r);}).join('');}
-  document.getElementById('presence-list').innerHTML=freeHtml+assignedHtml;
+
+  document.getElementById('presence-list').innerHTML=freeHtml+noReplyHtml+assignedHtml;
+
+  // Mettre à jour la hauteur max si la liste est ouverte
+  if(presenceListExpanded){
+    const wrap=document.getElementById('presence-list-wrap');
+    if(wrap)wrap.style.maxHeight=wrap.scrollHeight+200+'px';
+  }
+
   const presentCount=Object.values(presence).filter(v=>v==='present').length;
-  const pc=document.getElementById('present-count');if(pc)pc.textContent=presentCount+' présents'+(flagged.size?` (${flagged.size} ⚑)`:'');
+  const maybeCount=Object.values(presence).filter(v=>v==='maybe').length;
+  const pc=document.getElementById('present-count');if(pc)pc.textContent=presentCount+' présents';
+  // Compteur inline dans le titre de la barre
+  const ci=document.getElementById('presence-count-inline');
+  if(ci)ci.textContent=`(${presentCount}🟢 ${maybeCount}🟡 ${freeNoReply.length}⚫)${flagged.size?' · '+flagged.size+' ⚑':''}`;
 }
+
 async function toggleFlag(e,discordId){
   e.stopPropagation();if(!currentEventId||!discordId)return;
   if(flagged.has(discordId)){flagged.delete(discordId);await sb.from('flagged').delete().eq('event_id',currentEventId).eq('discord_id',discordId);}
@@ -725,7 +890,7 @@ async function toggleFlag(e,discordId){
   renderPresence();
 }
 
-// renderComp — avec data-rid sur les role-blocks pour le drag & drop
+// FIX #4 : renderComp — grille adaptive pleine largeur
 function renderComp(){
   const zone=document.getElementById('comp-zone');if(!currentComp){zone.innerHTML='';return;}
   const groups={};
@@ -736,10 +901,14 @@ function renderComp(){
     groups[cls].push({rid,count:slotDef.count,strict:slotDef.strict});
   });
   if(Object.keys(groups).length===0){zone.innerHTML='<div style="color:var(--text3);padding:20px;font-size:13px;">Aucune composition chargée.</div>';return;}
+
+  // FIX #4 : on calcule le nombre de colonnes dynamiquement
+  const nbGroups=Object.keys(groups).length;
+  // CSS grid : auto-fill avec minmax s'adapte naturellement à la largeur de l'écran
+  zone.style.gridTemplateColumns=`repeat(auto-fill, minmax(${Math.min(300, Math.floor(100/nbGroups))}px, 1fr))`;
+
   zone.innerHTML=CLASSES_DEF.filter(cls=>groups[cls.id]).map(cls=>{
     const roles=groups[cls.id].sort((a,b)=>ROLES_DEF.findIndex(r=>r.id===a.rid)-ROLES_DEF.findIndex(r=>r.id===b.rid));
-    // Le role-block reçoit le data-rid de la CLASSE pour les drops sur la carte entière
-    // Chaque sous-rôle a ses propres handlers
     return `<div class="role-block" data-rid="${cls.id}">
       <div class="role-block-header"><span class="role-block-label" style="color:${cls.color}">${cls.label}</span></div>
       ${roles.map(({rid,count})=>{
@@ -747,7 +916,7 @@ function renderComp(){
         const assigned=assignments[rid]||[];const nSlots=visibleSlots(rid);
         const weapCnt={};assigned.forEach(a=>{if(a.weapon){const k=a.weapon.toLowerCase();weapCnt[k]=(weapCnt[k]||0)+1;}});
         const overCount=assigned.length>count;
-        // Chaque label de rôle est aussi une zone de drop
+        // FIX #1 : data-rid sur le bloc de rôle pour le highlight précis
         let html=`<div class="role-block" data-rid="${rid}" style="background:transparent;border:none;padding:0;border-radius:0;margin-bottom:4px;"
           ondragover="onRoleBlockDragOver(event,'${rid}')"
           ondragleave="onRoleBlockDragLeave(event,'${rid}')"
@@ -762,7 +931,8 @@ function renderComp(){
             const isDup=r.unique&&a.weapon&&(weapCnt[a.weapon.toLowerCase()]||0)>1;
             html+=`<div class="player-slot">${p?avatarEl(p.name,p.color||'#5865F2',22):'<div style="width:22px;height:22px;border-radius:50%;background:var(--bg3);flex-shrink:0;"></div>'}<span style="flex:1;font-weight:500;color:${r.color}">${p?p.name:'?'}</span><span class="slot-weapon" style="color:${isDup?'#f04747':'var(--text3)'};">${a.weapon||'—'}${isDup?' ⚠':''}</span><button class="btn btn-icon btn-danger" onclick="removeAssign('${rid}',${i})" style="margin-left:4px;font-size:10px;">✕</button></div>`;
           }else{
-            html+=`<div class="empty-slot"
+            // FIX #1 : data-rid sur chaque empty-slot pour le highlight individuel
+            html+=`<div class="empty-slot" data-rid="${rid}"
               ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over-slot')"
               ondragleave="this.classList.remove('drag-over-slot')"
               ondrop="this.classList.remove('drag-over-slot');onRoleBlockDrop(event,'${rid}')"
@@ -790,7 +960,6 @@ function renameTempRole(id,label){const t=tempRoles.find(r=>r.id===id);if(t)t.la
 function deleteTempRole(id){tempRoles=tempRoles.filter(r=>r.id!==id);delete tempAssignments[id];renderTempZone();renderPresence();}
 function removeTempAssign(id,idx){if(!tempAssignments[id])return;tempAssignments[id].splice(idx,1);if(!tempAssignments[id].length)delete tempAssignments[id];renderTempZone();renderPresence();}
 
-// Floating assign (clic classique)
 function openFloatingAssign(e,rid){pendingRoleId=rid;pendingPlayerId=null;pendingIsTemp=false;const r=roleDef(rid)||{label:rid,color:'#aaa'};_showFloating(e,rid,r,false);}
 function openTempAssign(tid){pendingTempId=tid;pendingPlayerId=null;pendingIsTemp=true;const tr=tempRoles.find(t=>t.id===tid)||{label:''};const fakeEvt={currentTarget:{getBoundingClientRect:()=>({right:window.innerWidth/2,top:window.innerHeight/3})}};_showFloating(fakeEvt,tid,{label:tr.label,color:'#8b92a8'},true);}
 function _showFloating(e,roleId,r,isTemp){
