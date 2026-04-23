@@ -190,11 +190,11 @@ async function sendUnknownUserDM(discordUser, eventId) {
     const createProfileUrl = `${webAppUrl}?event_id=${eventId}&new_player=1&discord_id=${discordUser.id}`;
 
     const embed = new EmbedBuilder()
-      .setTitle('👋 Bienvenue dans la guilde !')
+      .setTitle('👋 Sup !')
       .setColor(0xf0c040)
       .setDescription(
         `Tu as répondu à un événement, mais **tu n'as pas encore de fiche joueur** dans notre système.\n\n` +
-        `Pour que le raid lead puisse t'inclure dans la composition, crée ta fiche en 30 secondes :`
+        `Pour que ca marche, crée ta fiche en 20 secondes :`
       )
       .addFields(
         {
