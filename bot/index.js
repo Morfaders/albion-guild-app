@@ -25,7 +25,19 @@ const commands = [
   },
   { name: 'profil', description: 'Voir ton profil de joueur' }
 ];
+// Map pour stocker les timers par eventId
+const updateTimers = new Map();
 
+function scheduleUpdate(eventId, delayMs = 2000) {
+  if (updateTimers.has(eventId)) {
+    clearTimeout(updateTimers.get(eventId));
+  }
+  const timer = setTimeout(async () => {
+    updateTimers.delete(eventId);
+    await updateEventMessage(eventId);
+  }, delayMs);
+  updateTimers.set(eventId, timer);
+}
 async function registerCommands() {
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   try {
@@ -235,11 +247,12 @@ client.once('ready', async () => {
   await registerCommands();
 
   supabase.channel('bot-changes')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'assignments' }, async (p) => { if(p.new?.event_id) await updateEventMessage(p.new.event_id); })
-    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'assignments' }, async (p) => { if(p.old?.event_id) await updateEventMessage(p.old.event_id); })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'presences' }, async (p) => { if(p.new?.event_id) await updateEventMessage(p.new.event_id); })
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'presences' }, async (p) => { if(p.new?.event_id) await updateEventMessage(p.new.event_id); })
-    .subscribe();
+    // APRÈS
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'assignments' }, (p) => { if(p.new?.event_id) scheduleUpdate(p.new.event_id); })
+  .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'assignments' }, (p) => { if(p.old?.event_id) scheduleUpdate(p.old.event_id); })
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'presences' }, (p) => { if(p.new?.event_id) scheduleUpdate(p.new.event_id); })
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'presences' }, (p) => { if(p.new?.event_id) scheduleUpdate(p.new.event_id); })
+  .subscribe();
 });
 
 client.on('interactionCreate', async interaction => {
