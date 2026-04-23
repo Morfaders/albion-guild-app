@@ -952,10 +952,11 @@ function startPresenceDrag(e,discordId,playerName,color){
         return;
       }
       const ok=playerCanPlayRole(discordId,rid);
-      block.classList.toggle('drop-compatible',ok);
-      block.classList.toggle('drop-incompatible',!ok);
-      // Appliquer la couleur du rôle comme variable CSS
-      if(ok){
+      const alreadyHere=(assignments[rid]||[]).some(a=>a.playerId===discordId);
+      const effectiveOk=ok&&!alreadyHere;
+      block.classList.toggle('drop-compatible',effectiveOk);
+      block.classList.toggle('drop-incompatible',!effectiveOk);
+      if(effectiveOk){
         block.style.setProperty('--block-role-color', r.color);
       }
     });
@@ -1153,7 +1154,9 @@ function renderComp(){
           if(a){
             const p=players.find(pl=>pl.discord_id===a.playerId);
             const isDup=r.unique&&a.weapon&&(weapCnt[a.weapon.toLowerCase()]||0)>1;
-            html+=`<div class="player-slot">${p?avatarEl(p.name,p.color||'#5865F2',22):'<div style="width:22px;height:22px;border-radius:50%;background:var(--bg3);flex-shrink:0;"></div>'}<span style="flex:1;font-weight:500;color:${r.color}">${p?p.name:'?'}</span><span class="slot-weapon" style="color:${isDup?'#f04747':'var(--text3)'};">${a.weapon||'—'}${isDup?' ⚠':''}</span><button class="btn btn-icon btn-danger" onclick="removeAssign('${rid}',${i})" style="margin-left:4px;font-size:10px;">✕</button></div>`;
+            const safePN=p?p.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'"):'?';
+            const dragAttrs=p&&a.playerId?`draggable="true" ondragstart="startPresenceDrag(event,'${a.playerId}','${safePN}','${r.color}')" ondragend="endPresenceDrag()"`:'' ;
+            html+=`<div class="player-slot" ${dragAttrs} style="${p&&a.playerId?'cursor:grab;':''}">${p?avatarEl(p.name,p.color||'#5865F2',22):'<div style="width:22px;height:22px;border-radius:50%;background:var(--bg3);flex-shrink:0;"></div>'}<span style="flex:1;font-weight:500;color:${r.color}">${p?p.name:'?'}</span><span class="slot-weapon" style="color:${isDup?'#f04747':'var(--text3)'};">${a.weapon||'—'}${isDup?' ⚠':''}</span><button class="btn btn-icon btn-danger" onclick="event.stopPropagation();removeAssign('${rid}',${i})" style="margin-left:4px;font-size:10px;">✕</button></div>`;
           }else{
             html+=`<div class="empty-slot" data-rid="${rid}"
               ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over-slot')"
