@@ -195,10 +195,10 @@ async function updateEventMessage(eventId) {
 }
 
 // ─── NOUVEAU : DM privé pour utilisateur inconnu ──────────────────────────────
-async function sendUnknownUserDM(discordUser, eventId) {
+async function sendUnknownUserEphemeral(interaction, eventId) {
   try {
     const webAppUrl = process.env.WEBAPP_URL || 'https://ton-app.com';
-    // Lien direct vers la web app avec discord_id pré-rempli ET new_player=1 pour ouvrir la modale
+    const discordUser = interaction.user;
     const createProfileUrl = `${webAppUrl}?event_id=${eventId}&new_player=1&discord_id=${discordUser.id}`;
 
     const embed = new EmbedBuilder()
@@ -206,7 +206,7 @@ async function sendUnknownUserDM(discordUser, eventId) {
       .setColor(0xf0c040)
       .setDescription(
         `Tu as répondu à un événement, mais **tu n'as pas encore de fiche joueur** dans notre système.\n\n` +
-        `Pour que ca marche, crée ta fiche en 20 secondes :`
+        `Pour que ça marche, crée ta fiche en 20 secondes :`
       )
       .addFields(
         {
@@ -224,7 +224,7 @@ async function sendUnknownUserDM(discordUser, eventId) {
           inline: false
         }
       )
-      .setFooter({ text: 'Ce message t\'est envoyé uniquement parce que ton Discord ID n\'est pas encore lié à un profil.' });
+      .setFooter({ text: 'Seul toi peut voir ce message.' });
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -233,11 +233,11 @@ async function sendUnknownUserDM(discordUser, eventId) {
         .setURL(createProfileUrl)
     );
 
-    await discordUser.send({ embeds: [embed], components: [row] });
-    console.log(`DM envoyé à ${discordUser.tag} (${discordUser.id})`);
+    // followUp éphémère dans le salon — visible uniquement par l'utilisateur
+    await interaction.followUp({ embeds: [embed], components: [row], ephemeral: true });
+    console.log(`Message éphémère envoyé à ${discordUser.tag} (${discordUser.id})`);
   } catch(err) {
-    // L'utilisateur a peut-être les DMs désactivés
-    console.warn(`Impossible d'envoyer un DM à ${discordUser.tag}: ${err.message}`);
+    console.warn(`Impossible d'envoyer le message éphémère à ${interaction.user.tag}: ${err.message}`);
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -320,10 +320,8 @@ client.on('interactionCreate', async interaction => {
       .maybeSingle();
 
     if(!existingPlayer) {
-      // Enregistrer quand même la présence pour le comptage
       await supabase.from('presences').upsert({ event_id: eventId, discord_id: discordId, status: action });
-      // Envoyer un DM pour créer sa fiche
-      await sendUnknownUserDM(interaction.user, eventId);
+      await sendUnknownUserEphemeral(interaction, eventId);
     } else {
       await supabase.from('presences').upsert({ event_id: eventId, discord_id: discordId, status: action });
     }
