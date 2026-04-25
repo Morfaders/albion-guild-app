@@ -12,6 +12,8 @@ const client = new Client({
   ]
 });
 
+const MONEY_PAGE_SIZE = 10;
+
 const commands = [
   { name: 'ping', description: 'Vérifie que le bot fonctionne' },
   {
@@ -23,8 +25,11 @@ const commands = [
       { name: 'comp', description: 'ID de la composition', type: 4, required: false }
     ]
   },
-  { name: 'profil', description: 'Voir ton profil de joueur' }
+  { name: 'profil', description: 'Voir ton profil de joueur' },
+  { name: 'silver', description: 'Voir ton solde de Silver' },
+  { name: 'money', description: 'Classement Silver de la guilde' },
 ];
+
 // Map pour stocker les timers par eventId
 const updateTimers = new Map();
 
@@ -38,6 +43,7 @@ function scheduleUpdate(eventId, delayMs = 2000) {
   }, delayMs);
   updateTimers.set(eventId, timer);
 }
+
 async function registerCommands() {
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   try {
@@ -51,6 +57,164 @@ async function registerCommands() {
     console.error('Erreur enregistrement:', err);
   }
 }
+
+function formatSilver(n) {
+  if (!n || n === 0) return '0';
+  return n.toLocaleString('fr-FR');
+}
+
+// ─── /SILVER ──────────────────────────────────────────────────────────────────
+async function handleSilverCommand(interaction) {
+  const discordId = interaction.user.id;
+
+  const { data: player } = await supabase
+    .from('players')
+    .select('id, name')
+    .eq('discord_id', discordId)
+    .maybeSingle();
+
+  if (!player) {
+    const webAppUrl = process.env.WEBAPP_URL || 'https://ton-app.com';
+    const createProfileUrl = `${webAppUrl}?new_player=1&discord_id=${discordId}`;
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setLabel('✏️ Créer ma fiche').setStyle(ButtonStyle.Link).setURL(createProfileUrl)
+    );
+    return interaction.reply({
+      content: `❌ Tu n'as pas encore de profil joueur.\nClique ci-dessous pour en créer un.`,
+      components: [row],
+      ephemeral: true
+    });
+  }
+
+  const { data: balanceRow } = await supabase
+    .from('silver_balances')
+    .select('balance')
+    .eq('player_id', player.id)
+    .maybeSingle();
+
+  const balance = balanceRow?.balance || 0;
+
+  // Récupérer le rang global
+  const { data: allBalances } = await supabase
+    .from('silver_balances')
+    .select('player_id, balance')
+    .order('balance', { ascending: false });
+
+  const ranked = (allBalances || []).filter(b => b.balance > 0);
+  const rankIdx = ranked.findIndex(b => b.player_id === player.id);
+  const rank = rankIdx === -1 ? null : rankIdx + 1;
+  const totalRanked = ranked.length;
+
+  const rankStr = rank
+    ? `#${rank} sur ${totalRanked} joueur(s) avec du Silver`
+    : 'Non classé (solde à 0)';
+
+  const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '🏅';
+
+  const embed = new EmbedBuilder()
+    .setTitle(`💰 Solde Silver — ${player.name}`)
+    .setColor(0xf0c040)
+    .addFields(
+      { name: 'Solde actuel', value: `**${formatSilver(balance)} 🪙**`, inline: true },
+      { name: 'Classement', value: rank ? `${rankEmoji} ${rankStr}` : `⚫ ${rankStr}`, inline: true }
+    )
+    .setFooter({ text: 'Albion Guild — Silver tracker' });
+
+  return interaction.reply({ embeds: [embed], ephemeral: true });
+}
+
+// ─── /MONEY ───────────────────────────────────────────────────────────────────
+async function buildMoneyEmbed(page = 0) {
+  const { data: players } = await supabase.from('players').select('id, name');
+  const { data: allBalances } = await supabase
+    .from('silver_balances')
+    .select('player_id, balance')
+    .order('balance', { ascending: false });
+
+  const playerMap = {};
+  (players || []).forEach(p => { playerMap[p.id] = p.name; });
+
+  // Classement : tous les joueurs, balance 0 en bas
+  const allPlayers = (players || []).map(p => ({
+    id: p.id,
+    name: p.name,
+    balance: 0
+  }));
+  (allBalances || []).forEach(b => {
+    const p = allPlayers.find(pl => pl.id === b.player_id);
+    if (p) p.balance = b.balance || 0;
+  });
+
+  allPlayers.sort((a, b) => b.balance - a.balance || a.name.localeCompare(b.name));
+
+  const totalPages = Math.max(1, Math.ceil(allPlayers.length / MONEY_PAGE_SIZE));
+  const safePage = Math.max(0, Math.min(page, totalPages - 1));
+  const slice = allPlayers.slice(safePage * MONEY_PAGE_SIZE, (safePage + 1) * MONEY_PAGE_SIZE);
+
+  const totalSilver = allPlayers.reduce((s, p) => s + p.balance, 0);
+
+  const rankEmoji = (rank) => {
+    if (rank === 1) return '🥇';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    return `**#${rank}**`;
+  };
+
+  const lines = slice.map((p, i) => {
+    const globalRank = safePage * MONEY_PAGE_SIZE + i + 1;
+    const bal = p.balance > 0 ? `${formatSilver(p.balance)} 🪙` : '—';
+    return `${rankEmoji(globalRank)}  **${p.name}** — ${bal}`;
+  });
+
+  const embed = new EmbedBuilder()
+    .setTitle('💰 Classement Silver — Albion Guild')
+    .setColor(0xf0c040)
+    .setDescription(lines.join('\n') || '_Aucun joueur_')
+    .addFields(
+      { name: 'Total en circulation', value: `${formatSilver(totalSilver)} 🪙`, inline: true },
+      { name: 'Joueurs', value: `${allPlayers.length}`, inline: true }
+    )
+    .setFooter({ text: `Page ${safePage + 1}/${totalPages}` });
+
+  return { embed, currentPage: safePage, totalPages };
+}
+
+async function handleMoneyCommand(interaction) {
+  const { embed, currentPage, totalPages } = await buildMoneyEmbed(0);
+  const row = buildMoneyButtons(currentPage, totalPages);
+  await interaction.reply({ embeds: [embed], components: row ? [row] : [] });
+}
+
+function buildMoneyButtons(currentPage, totalPages) {
+  if (totalPages <= 1) return null;
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`money_prev_${currentPage}`)
+      .setLabel('◀ Précédent')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(currentPage === 0),
+    new ButtonBuilder()
+      .setCustomId(`money_next_${currentPage}`)
+      .setLabel('Suivant ▶')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(currentPage >= totalPages - 1)
+  );
+}
+
+async function handleMoneyButton(interaction) {
+  const parts = interaction.customId.split('_');
+  const direction = parts[1]; // 'prev' ou 'next'
+  const currentPage = parseInt(parts[2]);
+  const newPage = direction === 'next' ? currentPage + 1 : currentPage - 1;
+
+  await interaction.deferUpdate();
+
+  const { embed, currentPage: resolvedPage, totalPages } = await buildMoneyEmbed(newPage);
+  const row = buildMoneyButtons(resolvedPage, totalPages);
+  await interaction.editReply({ embeds: [embed], components: row ? [row] : [] });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function buildEventEmbed(eventId) {
   const [
@@ -194,7 +358,6 @@ async function updateEventMessage(eventId) {
   }
 }
 
-// ─── NOUVEAU : DM privé pour utilisateur inconnu ──────────────────────────────
 async function sendUnknownUserEphemeral(interaction, eventId) {
   try {
     const webAppUrl = process.env.WEBAPP_URL || 'https://ton-app.com';
@@ -233,40 +396,38 @@ async function sendUnknownUserEphemeral(interaction, eventId) {
         .setURL(createProfileUrl)
     );
 
-    // followUp éphémère dans le salon — visible uniquement par l'utilisateur
     await interaction.followUp({ embeds: [embed], components: [row], ephemeral: true });
     console.log(`Message éphémère envoyé à ${discordUser.tag} (${discordUser.id})`);
   } catch(err) {
     console.warn(`Impossible d'envoyer le message éphémère à ${interaction.user.tag}: ${err.message}`);
   }
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
 client.once('ready', async () => {
   console.log(`Bot connecte : ${client.user.tag}`);
   await registerCommands();
 
   supabase.channel('bot-changes')
-    // APRÈS
-  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'assignments' }, (p) => { if(p.new?.event_id) scheduleUpdate(p.new.event_id); })
-  .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'assignments' }, (p) => { if(p.old?.event_id) scheduleUpdate(p.old.event_id); })
-  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'presences' }, (p) => { if(p.new?.event_id) scheduleUpdate(p.new.event_id); })
-  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'presences' }, (p) => { if(p.new?.event_id) scheduleUpdate(p.new.event_id); })
-  .subscribe();
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'assignments' }, (p) => { if(p.new?.event_id) scheduleUpdate(p.new.event_id); })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'assignments' }, (p) => { if(p.old?.event_id) scheduleUpdate(p.old.event_id); })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'presences' }, (p) => { if(p.new?.event_id) scheduleUpdate(p.new.event_id); })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'presences' }, (p) => { if(p.new?.event_id) scheduleUpdate(p.new.event_id); })
+    .subscribe();
 });
 
 client.on('interactionCreate', async interaction => {
 
-  if(interaction.isChatInputCommand()) {
+  // ── Slash commands ──────────────────────────────────────────────────────────
+  if (interaction.isChatInputCommand()) {
 
-    if(interaction.commandName === 'ping') {
+    if (interaction.commandName === 'ping') {
       return interaction.reply({ content: 'Pong ! Le bot fonctionne.', ephemeral: true });
     }
 
-    if(interaction.commandName === 'profil') {
+    if (interaction.commandName === 'profil') {
       const discordId = interaction.user.id;
       const { data: player } = await supabase.from('players').select('*').eq('discord_id', discordId).single();
-      if(player) {
+      if (player) {
         return interaction.reply({ content: `👤 **${player.name}**\nRoles : ${player.roles.length > 0 ? player.roles.join(', ') : 'aucun role defini'}`, ephemeral: true });
       } else {
         const webAppUrl = process.env.WEBAPP_URL || 'https://ton-app.com';
@@ -278,7 +439,15 @@ client.on('interactionCreate', async interaction => {
       }
     }
 
-    if(interaction.commandName === 'event') {
+    if (interaction.commandName === 'silver') {
+      return handleSilverCommand(interaction);
+    }
+
+    if (interaction.commandName === 'money') {
+      return handleMoneyCommand(interaction);
+    }
+
+    if (interaction.commandName === 'event') {
       const titre = interaction.options.getString('titre');
       const date = interaction.options.getString('date');
       const compId = interaction.options.getInteger('comp') ?? 1;
@@ -303,29 +472,35 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  if(interaction.isButton()) {
+  // ── Buttons ─────────────────────────────────────────────────────────────────
+  if (interaction.isButton()) {
     const parts = interaction.customId.split('_');
     const action = parts[0];
+
+    // Pagination /money
+    if (action === 'money') {
+      return handleMoneyButton(interaction);
+    }
+
+    // Présences événement
     const eventId = parseInt(parts[1]);
-    if(!['present', 'maybe', 'absent'].includes(action)) return;
+    if (!['present', 'maybe', 'absent'].includes(action)) return;
 
     const discordId = interaction.user.id;
     await interaction.deferUpdate();
 
-    // ─── NOUVEAU : vérifier si le joueur existe ───────────────────────────────
     const { data: existingPlayer } = await supabase
       .from('players')
       .select('id')
       .eq('discord_id', discordId)
       .maybeSingle();
 
-    if(!existingPlayer) {
+    if (!existingPlayer) {
       await supabase.from('presences').upsert({ event_id: eventId, discord_id: discordId, status: action });
       await sendUnknownUserEphemeral(interaction, eventId);
     } else {
       await supabase.from('presences').upsert({ event_id: eventId, discord_id: discordId, status: action });
     }
-    // ─────────────────────────────────────────────────────────────────────────
 
     await updateEventMessage(eventId);
   }

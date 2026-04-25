@@ -267,11 +267,11 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
     <div class="sidebar-label">📋 Gestion</div>
     <div class="nav-item active" onclick="showView('profiles')" id="nav-profiles"><div class="nav-dot" style="background:#5865F2"></div>Profils joueurs</div>
     <div class="nav-item" onclick="showView('event')" id="nav-event"><div class="nav-dot" style="background:#3ddc84"></div>Événement actif</div>
+    <div class="nav-item" onclick="showView('silver')" id="nav-silver"><div class="nav-dot" style="background:#f0c040"></div>Silver</div>
     <div class="sidebar-label">⚙️ Admin</div>
     <div class="nav-item" onclick="showView('comps')" id="nav-comps"><div class="nav-dot" style="background:#f0c040"></div>Éditeur comp</div>
     <div class="nav-item" onclick="showView('classes')" id="nav-classes"><div class="nav-dot" style="background:#b478f0"></div>Classes & Rôles</div>
     <div class="nav-item" onclick="showView('payout')" id="nav-payout"><div class="nav-dot" style="background:#f0c040"></div>Payout Making</div>
-    <div class="nav-item" onclick="showView('silver')" id="nav-silver"><div class="nav-dot" style="background:#f0c040"></div>Silver</div>
     <div class="sidebar-bottom">
       <div class="user-avatar" id="sidebar-avatar" onclick="openIdentityModal()" title="Définir mon identité">?</div>
       <div style="flex:1;min-width:0;">
@@ -364,6 +364,33 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
         <div id="temp-zone"></div>
       </div>
 
+      <!-- SILVER — accessible à tous, reset admin only -->
+      <div class="view" id="view-silver">
+        <div class="section-head">
+          <div class="section-title">💰 Silver</div>
+        </div>
+        <div class="silver-total-bar" id="silver-total-bar"></div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap;">
+          <div style="position:relative;flex:1;max-width:280px;">
+            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:12px;pointer-events:none;">🔍</span>
+            <input id="silver-search" class="player-search-input" style="padding-left:28px;" placeholder="Rechercher un joueur..." oninput="renderSilverTable()">
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;">
+          <table class="silver-table" id="silver-table">
+            <thead>
+              <tr>
+                <th onclick="silverSort('rank')" id="th-rank">Rang <span class="sort-ico" id="si-rank">↕</span></th>
+                <th onclick="silverSort('name')" id="th-name">Joueur <span class="sort-ico" id="si-name">↕</span></th>
+                <th onclick="silverSort('silver')" id="th-silver" class="sorted">Silver <span class="sort-ico" id="si-silver">↓</span></th>
+                <th style="width:60px;"></th>
+              </tr>
+            </thead>
+            <tbody id="silver-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- COMPS -->
       <div class="view" id="view-comps">
         <div class="section-head">
@@ -437,32 +464,6 @@ body.render-mode .app{height:auto;}body.render-mode .main{overflow:visible;}body
         <div style="display:flex;gap:8px;margin-top:16px;">
           <button class="btn btn-gold" onclick="confirmPayout()" id="payout-confirm-btn">💰 Distribuer le Silver</button>
           <button class="btn btn-sm" onclick="payoutClearAll();document.getElementById('payout-amount').value='';renderPayoutPreview();">Réinitialiser</button>
-        </div>
-      </div>
-
-      <!-- SILVER -->
-      <div class="view" id="view-silver">
-        <div class="section-head">
-          <div class="section-title">💰 Silver</div>
-        </div>
-        <div class="silver-total-bar" id="silver-total-bar"></div>
-        <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap;">
-          <div style="position:relative;flex:1;max-width:280px;">
-            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:12px;pointer-events:none;">🔍</span>
-            <input id="silver-search" class="player-search-input" style="padding-left:28px;" placeholder="Rechercher un joueur..." oninput="renderSilverTable()">
-          </div>
-        </div>
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;">
-          <table class="silver-table" id="silver-table">
-            <thead>
-              <tr>
-                <th onclick="silverSort('name')" id="th-name">Joueur <span class="sort-ico" id="si-name">↕</span></th>
-                <th onclick="silverSort('silver')" id="th-silver" class="sorted">Silver <span class="sort-ico" id="si-silver">↓</span></th>
-                <th style="width:60px;"></th>
-              </tr>
-            </thead>
-            <tbody id="silver-tbody"></tbody>
-          </table>
         </div>
       </div>
 
@@ -565,9 +566,9 @@ let pendingRoleId=null,pendingPlayerId=null,pendingIsTemp=false,pendingTempId=nu
 let currentEventId=null;
 let presenceListExpanded=false;
 let currentEventData=null;
-let silverBalances={};// discord_id or player_id -> balance
-let silverSortKey='silver';let silverSortDir=-1;// -1 = desc
-let payoutSelectedIds=new Set();// discord_ids
+let silverBalances={};
+let silverSortKey='silver';let silverSortDir=-1;
+let payoutSelectedIds=new Set();
 
 // --- DRAG STATE ---
 let dragPlayerId=null;
@@ -575,7 +576,8 @@ let dragPendingRoleId=null;
 
 // --- ADMIN ---
 const ADMIN_PASSWORD='Adminitracteur';
-const PROTECTED_VIEWS=['comps','classes','payout','silver'];
+// Silver retiré de la liste des vues protégées
+const PROTECTED_VIEWS=['comps','classes','payout'];
 let adminUnlocked=false;
 let pendingUnlockView=null;
 let pendingUnlockCallback=null;
@@ -585,7 +587,7 @@ function requireAdmin(callback){
   if(adminUnlocked){callback();return;}
   pendingUnlockCallback=callback;
   pendingUnlockView=null;
-  document.getElementById('unlock-target-name').textContent='cette section';
+  document.getElementById('unlock-target-name').textContent='cette action';
   document.getElementById('admin-pw-input').value='';
   document.getElementById('admin-pw-error').style.display='none';
   document.getElementById('modal-admin-unlock').classList.add('open');
@@ -595,7 +597,7 @@ function requestAdminUnlock(v){
   if(adminUnlocked){_doShowView(v);return;}
   pendingUnlockView=v;
   pendingUnlockCallback=null;
-  const names={comps:"l'éditeur de composition",classes:"classes & rôles",payout:"Payout Making",silver:"Silver"};
+  const names={comps:"l'éditeur de composition",classes:"classes & rôles",payout:"Payout Making"};
   document.getElementById('unlock-target-name').textContent=names[v]||v;
   document.getElementById('admin-pw-input').value='';
   document.getElementById('admin-pw-error').style.display='none';
@@ -610,7 +612,8 @@ function tryAdminUnlock(){
     document.getElementById('admin-sidebar-badge').style.display='block';
     if(pendingUnlockCallback){pendingUnlockCallback();pendingUnlockCallback=null;}
     else if(pendingUnlockView){_doShowView(pendingUnlockView);pendingUnlockView=null;}
-    renderProfiles();// re-render to show delete btns
+    renderProfiles();
+    renderSilverTable();// re-render silver pour afficher boutons reset
   } else {
     const i=document.getElementById('admin-pw-input');
     document.getElementById('admin-pw-error').style.display='block';
@@ -623,10 +626,10 @@ function closeAdminUnlockModal(){document.getElementById('modal-admin-unlock').c
 function lockAdmin(){
   adminUnlocked=false;
   document.getElementById('admin-sidebar-badge').style.display='none';
-  // If on protected view, go back to profiles
   const activeView=document.querySelector('.view.active');
   if(activeView&&PROTECTED_VIEWS.includes(activeView.id.replace('view-',''))){_doShowView('profiles');}
   renderProfiles();
+  renderSilverTable();// re-render pour cacher boutons reset
   _showToast('🔒 Mode admin désactivé','#f0c040');
 }
 
@@ -876,8 +879,7 @@ function renderSilverTotals(){
 function silverSort(key){
   if(silverSortKey===key)silverSortDir*=-1;
   else{silverSortKey=key;silverSortDir=key==='silver'?-1:1;}
-  // update headers
-  ['name','silver'].forEach(k=>{
+  ['name','silver','rank'].forEach(k=>{
     const th=document.getElementById('th-'+k);const si=document.getElementById('si-'+k);
     if(th)th.classList.toggle('sorted',k===silverSortKey);
     if(si)si.textContent=k!==silverSortKey?'↕':(silverSortDir>0?'↑':'↓');
@@ -886,24 +888,38 @@ function silverSort(key){
 }
 function renderSilverTable(){
   const q=(document.getElementById('silver-search')||{}).value?.toLowerCase().trim()||'';
+  // Trier tous les joueurs par silver décroissant pour le rang
+  const ranked=[...players].sort((a,b)=>(silverBalances[b.id]||0)-(silverBalances[a.id]||0));
+  const rankMap={};ranked.forEach((p,i)=>rankMap[p.id]=i+1);
+
   let list=[...players].filter(p=>!q||p.name.toLowerCase().includes(q));
   list.sort((a,b)=>{
     if(silverSortKey==='silver'){
       const ba=silverBalances[a.id]||0,bb=silverBalances[b.id]||0;
       return silverSortDir*(ba-bb)||a.name.localeCompare(b.name);
     }
+    if(silverSortKey==='rank'){
+      return silverSortDir*(rankMap[a.id]-rankMap[b.id]);
+    }
     return silverSortDir*a.name.localeCompare(b.name);
   });
+
   const tbody=document.getElementById('silver-tbody');if(!tbody)return;
   tbody.innerHTML=list.map(p=>{
     const bal=silverBalances[p.id]||0;
-    const resetBtn=adminUnlocked?`<button class="btn btn-sm btn-danger" onclick="resetSilver(${p.id})" title="Remettre à 0" style="font-size:10px;padding:3px 7px;">↺ 0</button>`:'<span style="font-size:10px;color:var(--text3);">—</span>';
+    const rank=rankMap[p.id];
+    const rankIcon=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':`#${rank}`;
+    // Bouton reset visible uniquement si admin
+    const resetBtn=adminUnlocked
+      ?`<button class="btn btn-sm btn-danger" onclick="resetSilver(${p.id})" title="Remettre à 0" style="font-size:10px;padding:3px 7px;">↺ 0</button>`
+      :`<button class="btn btn-sm" onclick="requireAdmin(()=>resetSilver(${p.id}))" title="Admin requis" style="font-size:10px;padding:3px 7px;opacity:.4;">🔒</button>`;
     return `<tr>
+      <td style="font-size:13px;font-weight:600;color:${rank<=3?'var(--gold)':'var(--text3)'};">${rankIcon}</td>
       <td><div style="display:flex;align-items:center;gap:8px;">${avatarEl(p.name,p.color||'#5865F2',26)}<span style="font-weight:500;">${p.name}</span></div></td>
       <td class="${bal>0?'silver-amount':'silver-zero'}">${bal>0?formatSilver(bal)+' 🪙':'—'}</td>
       <td>${resetBtn}</td>
     </tr>`;
-  }).join('')||'<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:20px;">Aucun joueur trouvé</td></tr>';
+  }).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;">Aucun joueur trouvé</td></tr>';
 }
 async function resetSilver(playerId){
   if(!adminUnlocked){requireAdmin(()=>resetSilver(playerId));return;}
@@ -959,7 +975,7 @@ function renderPayoutPreview(){
   const remainder=total-(share*count);
   const selectedPlayers=players.filter(p=>payoutSelectedIds.has(p.id)).sort((a,b)=>a.name.localeCompare(b.name));
   let rows=selectedPlayers.map((p,i)=>{
-    const s=i===0?share+remainder:share;// first player gets the remainder
+    const s=i===0?share+remainder:share;
     const newBal=(silverBalances[p.id]||0)+s;
     return `<div class="payout-preview-row">
       <div style="display:flex;align-items:center;gap:8px;">${avatarEl(p.name,p.color||'#5865F2',20)}<span>${p.name}</span></div>
